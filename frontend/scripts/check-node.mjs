@@ -1,9 +1,7 @@
 const version = process.versions.node;
 const [major, minor] = version.split('.').map((part) => Number(part));
 
-const isSupported =
-  (major === 20 && minor >= 19) ||
-  (major === 22 && minor >= 13);
+const isSupported = major >= 20;
 
 if (!isSupported) {
   console.error('');

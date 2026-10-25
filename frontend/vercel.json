@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/frontend/**/!(*.map)",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://ecommerce-si2.onrender.com/api/$1",
+      "headers": {
+        "Cache-Control": "no-cache"
+      }
+    },
+    {
+      "src": "/health",
+      "dest": "https://ecommerce-si2.onrender.com/health"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/frontend/$1"
+    }
+  ]
+}
