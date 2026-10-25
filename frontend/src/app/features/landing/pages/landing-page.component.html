@@ -1,23 +1,28 @@
 <!-- ============================================================
      HOMEPAGE SAAS - FASHIONSTORE
      Archivo: frontend/src/app/features/landing/pages/landing-page.component.html
-     
-     * Para cambiar imágenes:
-       - Logo icono: src="assets/logo-fashionstore.png"
-       - Logo nombre: src="assets/logo-name.png"
-       - Foto principal del Hero: src="assets/clothes-perch-.avif" (o tu foto preferida)
-       - Foto de soporte / Probador IA: src="assets/images/login-fashion.png"
+     Navegación con desplazamiento fluido y micro-interacciones suaves
      ============================================================ -->
 
 <div class="min-h-screen bg-white text-slate-900 selection:bg-[#f8baa3] selection:text-slate-950 font-body">
 
   <!-- ================= NAVEGACIÓN PRINCIPAL ================= -->
-  <header class="sticky top-0 z-50 w-full border-b border-slate-100 bg-white/90 backdrop-blur-md">
+  <header 
+    class="sticky top-0 z-50 w-full border-b border-slate-100/80 transition-all duration-300"
+    [class.bg-white/95]="isScrolled()"
+    [class.bg-white/80]="!isScrolled()"
+    [class.shadow-sm]="isScrolled()"
+    [class.backdrop-blur-md]="true"
+  >
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
       
-      <!-- LOGO DE MARCA -->
-      <a routerLink="/" class="flex items-center gap-3 group transition-transform hover:scale-[1.01]">
-        <!-- Icono de marca -->
+      <!-- LOGO DE MARCA (CON RETORNO FLUIDO AL INICIO) -->
+      <a 
+        href="#" 
+        (click)="scrollToTop($event)" 
+        class="flex items-center gap-3 group transition-transform hover:scale-[1.01] cursor-pointer"
+        title="Volver al inicio"
+      >
         <img 
           [src]="images.logoIcon" 
           alt="FashionStore Logo" 
@@ -25,9 +30,8 @@
           onerror="this.style.display='none'"
         />
         
-        <!-- Nombre de marca con tipografía SIFONN PRO -->
         <div class="flex flex-col">
-          <span class="font-title text-2xl font-bold tracking-wider text-slate-900 group-hover:text-[#d67b5f] transition-colors">
+          <span class="font-title text-2xl font-bold tracking-wider text-slate-900 group-hover:text-[#cf7255] transition-colors">
             FASHIONSTORE
           </span>
           <span class="text-[10px] font-medium tracking-widest text-slate-600 uppercase">
@@ -36,16 +40,48 @@
         </div>
       </a>
 
-      <!-- ENLACES DE SECCIÓN (DESKTOP) -->
+      <!-- ENLACES DE SECCIÓN CON DESPLAZAMIENTO FLUIDO (DESKTOP) -->
       <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-        <a href="#caracteristicas" class="hover:text-slate-900 transition-colors">Características</a>
-        <a href="#como-funciona" class="hover:text-slate-900 transition-colors">Cómo funciona</a>
-        <a href="#probador-ia" class="flex items-center gap-1.5 hover:text-slate-900 transition-colors">
+        <a 
+          href="#caracteristicas" 
+          (click)="scrollToSection($event, 'caracteristicas')" 
+          class="nav-link hover:text-slate-950 transition-colors cursor-pointer"
+        >
+          Características
+        </a>
+        
+        <a 
+          href="#como-funciona" 
+          (click)="scrollToSection($event, 'como-funciona')" 
+          class="nav-link hover:text-slate-950 transition-colors cursor-pointer"
+        >
+          Cómo funciona
+        </a>
+        
+        <a 
+          href="#probador-ia" 
+          (click)="scrollToSection($event, 'probador-ia')" 
+          class="nav-link flex items-center gap-1.5 hover:text-slate-950 transition-colors cursor-pointer"
+        >
           <span>Probador IA</span>
           <span class="rounded-full bg-[#f8baa3]/40 px-2 py-0.5 text-[10px] font-semibold text-slate-800">Nuevo</span>
         </a>
-        <a href="#precios" class="hover:text-slate-900 transition-colors">Precios</a>
-        <a href="#faq" class="hover:text-slate-900 transition-colors">FAQ</a>
+        
+        <a 
+          href="#precios" 
+          (click)="scrollToSection($event, 'precios')" 
+          class="nav-link hover:text-slate-950 transition-colors cursor-pointer"
+        >
+          Precios
+        </a>
+        
+        <a 
+          href="#faq" 
+          (click)="scrollToSection($event, 'faq')" 
+          class="nav-link hover:text-slate-950 transition-colors cursor-pointer"
+        >
+          FAQ
+        </a>
       </nav>
 
       <!-- BOTONES DE ACCESO -->
@@ -59,7 +95,7 @@
         
         <a 
           routerLink="/auth/register" 
-          class="btn-brand inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all"
+          class="btn-brand inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm"
         >
           Registrarse
         </a>
@@ -72,33 +108,29 @@
 
     <!-- ================= HERO SECTION ================= -->
     <section class="relative overflow-hidden pt-8 pb-16 lg:pt-16 lg:pb-24">
-      <!-- Glow decorativo suave de fondo -->
       <div class="pointer-events-none absolute -top-40 right-10 -z-10 h-96 w-96 rounded-full bg-[#f8baa3]/25 blur-3xl"></div>
       <div class="pointer-events-none absolute top-1/2 -left-20 -z-10 h-80 w-80 rounded-full bg-slate-100/80 blur-2xl"></div>
 
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
           
-          <!-- COLUMNA IZQUIERDA: MENSAJE PRINCIPAL -->
+          <!-- COLUMNA IZQUIERDA -->
           <div class="lg:col-span-7 space-y-6 text-left">
             
-            <!-- BADGE INDICADOR -->
             <div class="inline-flex items-center gap-2 rounded-full border border-[#f8baa3]/60 bg-[#fff5f1] px-4 py-1.5 text-xs font-semibold text-slate-800">
               <span class="h-2 w-2 rounded-full bg-[#e38568] animate-pulse"></span>
               Plataforma #1 para tiendas y marcas de ropa
             </div>
 
-            <!-- TÍTULO PRINCIPAL (SIFONN PRO) -->
             <h1 class="font-title text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.08]">
               Gestiona tu tienda de ropa con FashionStore
             </h1>
 
-            <!-- SUBTÍTULO (MONTSERRAT) -->
             <p class="max-w-2xl text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
               La plataforma SaaS completa diseñada para simplificar tu inventario textil por talles y colores, ventas POS, probador virtual con IA y clientes. <strong class="font-semibold text-slate-900">Primer mes gratis. Sin tarjetas de crédito.</strong>
             </p>
 
-            <!-- BOTONES DE ACCIÓN -->
+            <!-- BOTONES DE ACCIÓN FLUIDOS -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
               <a 
                 routerLink="/auth/register" 
@@ -112,7 +144,8 @@
 
               <a 
                 href="#probador-ia" 
-                class="btn-brand-outline inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-medium"
+                (click)="scrollToSection($event, 'probador-ia')"
+                class="btn-brand-outline inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-medium cursor-pointer"
               >
                 <svg class="h-5 w-5 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -122,7 +155,7 @@
               </a>
             </div>
 
-            <!-- PRUEBA SOCIAL / USUARIOS ACTIVOS -->
+            <!-- PRUEBA SOCIAL -->
             <div class="flex items-center gap-4 pt-4 border-t border-slate-100">
               <div class="flex -space-x-2">
                 <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white ring-2 ring-white">M</span>
@@ -137,13 +170,10 @@
 
           </div>
 
-          <!-- COLUMNA DERECHA: TARJETA VISUAL / SHOWCASE -->
+          <!-- COLUMNA DERECHA: SHOWCASE CON LEVITACIÓN FLUIDA -->
           <div class="lg:col-span-5 relative">
             
-            <!-- MARCO PRINCIPAL DE LA IMAGEN DE TIENDA -->
             <div class="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-900 shadow-2xl">
-              
-              <!-- FOTO PRINCIPAL DE TIENDA DE ROPA (assets/clothes-perch-cream.jpg) -->
               <img 
                 [src]="images.heroStore" 
                 alt="Tienda de moda y ropa gestionada con FashionStore"
@@ -151,11 +181,10 @@
                 onerror="this.src='/assets/women-store.jpg'"
               />
 
-              <!-- Scrim de contraste inferior -->
               <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
 
-              <!-- NOTIFICACIÓN EN TIEMPO REAL FLOTANTE (ESTILO CLOTHINGHUB) -->
-              <div class="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/95 p-4 shadow-xl backdrop-blur-md border border-slate-100">
+              <!-- NOTIFICACIÓN EN TIEMPO REAL CON ANIMACIÓN DE LEVITACIÓN -->
+              <div class="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/95 p-4 shadow-xl backdrop-blur-md border border-slate-100 animate-float">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff2ec] text-[#d67b5f]">
@@ -183,8 +212,8 @@
 
             </div>
 
-            <!-- CHIP FLOTANTE SUPERIOR DERECHO -->
-            <div class="absolute -top-3 -right-3 hidden sm:flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 shadow-lg">
+            <!-- CHIP FLOTANTE SUPERIOR CON RETARDO DE ANIMACIÓN -->
+            <div class="absolute -top-3 -right-3 hidden sm:flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 shadow-lg animate-float-delayed">
               <span class="flex h-3 w-3 rounded-full bg-[#f8baa3] ring-4 ring-[#f8baa3]/30"></span>
               <p class="text-xs font-semibold text-slate-800">Probador Virtual IA Activo</p>
             </div>
@@ -196,10 +225,9 @@
     </section>
 
     <!-- ================= CARACTERÍSTICAS / VALOR AGREGADO ================= -->
-    <section id="caracteristicas" class="py-16 sm:py-24 bg-slate-50/70 border-t border-b border-slate-100">
+    <section id="caracteristicas" class="scroll-mt-24 py-16 sm:py-24 bg-slate-50/70 border-t border-b border-slate-100">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
-        <!-- ENCABEZADO DE SECCIÓN -->
         <div class="text-center max-w-3xl mx-auto space-y-3">
           <p class="text-xs font-bold tracking-widest text-[#cf7255] uppercase">
             TODO LO QUE NECESITAS
@@ -212,14 +240,13 @@
           </p>
         </div>
 
-        <!-- GRID DE CARACTERÍSTICAS (6 TARJETAS) -->
+        <!-- GRID DE CARACTERÍSTICAS -->
         <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
-          <!-- 1. GESTIÓN DE INVENTARIO -->
           <div class="card-hover rounded-2xl bg-white p-7 border border-slate-200/70 shadow-sm flex flex-col justify-between">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff2ec] text-[#d67b5f]">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff2ec] text-[#d67b5f] transition-transform duration-300 group-hover:scale-110">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
@@ -237,11 +264,10 @@
             </div>
           </div>
 
-          <!-- 2. SISTEMA POS -->
           <div class="card-hover rounded-2xl bg-white p-7 border border-slate-200/70 shadow-sm flex flex-col justify-between">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-transform duration-300 group-hover:scale-110">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
@@ -259,12 +285,11 @@
             </div>
           </div>
 
-          <!-- 3. PROBADOR VIRTUAL IA -->
           <div class="card-hover rounded-2xl bg-white p-7 border border-[#f8baa3] shadow-md relative overflow-hidden flex flex-col justify-between">
             <div class="absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-[#f8baa3]/20 blur-xl pointer-events-none"></div>
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f8baa3] text-slate-950">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f8baa3] text-slate-950 transition-transform duration-300 group-hover:scale-110">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -282,11 +307,10 @@
             </div>
           </div>
 
-          <!-- 4. GESTIÓN DE CLIENTES -->
           <div class="card-hover rounded-2xl bg-white p-7 border border-slate-200/70 shadow-sm flex flex-col justify-between">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-transform duration-300 group-hover:scale-110">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
@@ -304,11 +328,10 @@
             </div>
           </div>
 
-          <!-- 5. CATÁLOGO & RESERVAS -->
           <div class="card-hover rounded-2xl bg-white p-7 border border-slate-200/70 shadow-sm flex flex-col justify-between">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-transform duration-300 group-hover:scale-110">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                   </svg>
@@ -326,11 +349,10 @@
             </div>
           </div>
 
-          <!-- 6. ANALÍTICAS & REPORTES -->
           <div class="card-hover rounded-2xl bg-white p-7 border border-slate-200/70 shadow-sm flex flex-col justify-between">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-transform duration-300 group-hover:scale-110">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
@@ -354,11 +376,10 @@
     </section>
 
     <!-- ================= PROBADOR VIRTUAL IA (SECCIÓN DESTACADA) ================= -->
-    <section id="probador-ia" class="py-16 sm:py-24 bg-white overflow-hidden">
+    <section id="probador-ia" class="scroll-mt-24 py-16 sm:py-24 bg-white overflow-hidden">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="rounded-3xl bg-[#1b1f28] text-white p-8 sm:p-12 lg:p-16 relative overflow-hidden shadow-2xl">
           
-          <!-- Elementos de luz decorativos -->
           <div class="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-[#f8baa3]/20 blur-3xl pointer-events-none"></div>
           <div class="absolute bottom-0 left-10 h-60 w-60 rounded-full bg-[#f8baa3]/10 blur-2xl pointer-events-none"></div>
 
@@ -378,11 +399,11 @@
               </p>
 
               <div class="grid grid-cols-2 gap-4 pt-2">
-                <div class="rounded-xl bg-white/5 p-4 border border-white/10">
+                <div class="rounded-xl bg-white/5 p-4 border border-white/10 transition-transform duration-300 hover:-translate-y-1">
                   <p class="font-title text-3xl font-bold text-[#f8baa3]">+45%</p>
                   <p class="text-xs text-slate-300 mt-1">Mayor tasa de conversión online</p>
                 </div>
-                <div class="rounded-xl bg-white/5 p-4 border border-white/10">
+                <div class="rounded-xl bg-white/5 p-4 border border-white/10 transition-transform duration-300 hover:-translate-y-1">
                   <p class="font-title text-3xl font-bold text-[#f8baa3]">-94%</p>
                   <p class="text-xs text-slate-300 mt-1">Menos devoluciones por talle</p>
                 </div>
@@ -403,18 +424,17 @@
 
             <div class="lg:col-span-5">
               <div class="relative mx-auto max-w-sm rounded-2xl overflow-hidden border border-white/20 bg-slate-900 shadow-2xl">
-                <!-- Imagen de demostración del probador (assets/women-store.jpg) -->
                 <img 
                   [src]="images.tryOnStore" 
                   alt="Probador Virtual IA FashionStore" 
-                  class="w-full h-80 sm:h-96 object-cover object-top"
+                  class="w-full h-80 sm:h-96 object-cover object-top transition-transform duration-700 hover:scale-105"
                   onerror="this.src='/assets/clothes-perch-cream.jpg'"
                 />
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
-                <div class="absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 backdrop-blur-md text-slate-900 text-xs">
+                <div class="absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 backdrop-blur-md text-slate-900 text-xs shadow-lg animate-float">
                   <div class="flex items-center justify-between font-semibold">
                     <span class="flex items-center gap-1.5 text-slate-900">
-                      <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                      <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                       Simulación completada
                     </span>
                     <span class="text-[#cf7255] font-bold">Talla sugerida: M</span>
@@ -430,7 +450,7 @@
     </section>
 
     <!-- ================= CÓMO FUNCIONA (4 PASOS) ================= -->
-    <section id="como-funciona" class="py-16 sm:py-24 bg-slate-50/70 border-t border-slate-100">
+    <section id="como-funciona" class="scroll-mt-24 py-16 sm:py-24 bg-slate-50/70 border-t border-slate-100">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto space-y-3">
@@ -445,13 +465,11 @@
           </p>
         </div>
 
-        <!-- 4 PASOS EN FILA (ESTILO CLOTHINGHUB) -->
         <div class="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           @for (step of steps; track step.number) {
-            <div class="relative flex flex-col items-center text-center p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm transition-all hover:border-[#f8baa3] hover:-translate-y-1">
+            <div class="relative flex flex-col items-center text-center p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm transition-all duration-300 hover:border-[#f8baa3] hover:-translate-y-2 hover:shadow-md">
               
-              <!-- Círculo de número con acento #f8baa3 -->
-              <div class="relative mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-slate-900 bg-white">
+              <div class="relative mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-slate-900 bg-white transition-transform duration-300 hover:scale-105">
                 <span class="font-title text-xl font-bold text-slate-900">
                   {{ step.number }}
                 </span>
@@ -476,7 +494,7 @@
     </section>
 
     <!-- ================= PRECIOS / PLAN ================= -->
-    <section id="precios" class="py-16 sm:py-24 bg-white relative">
+    <section id="precios" class="scroll-mt-24 py-16 sm:py-24 bg-white relative">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto space-y-3">
@@ -491,11 +509,9 @@
           </p>
         </div>
 
-        <!-- TARJETA DE PRECIO PRINCIPAL (ESTILO CLOTHINGHUB CON ACENTO #F8BAA3) -->
         <div class="mt-14 mx-auto max-w-lg">
-          <div class="rounded-3xl border-2 border-[#f8baa3] bg-white shadow-xl overflow-hidden relative">
+          <div class="rounded-3xl border-2 border-[#f8baa3] bg-white shadow-xl overflow-hidden relative transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl">
             
-            <!-- Barra superior de acento con color #f8baa3 -->
             <div class="h-3 w-full bg-[#f8baa3]"></div>
 
             <div class="p-8 sm:p-10 space-y-6">
@@ -515,7 +531,6 @@
                 </p>
               </div>
 
-              <!-- LISTADO DE BENEFICIOS CON CHECKS -->
               <ul class="space-y-4 pt-4 border-t border-slate-100 text-sm text-slate-700">
                 <li class="flex items-start gap-3">
                   <svg class="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -560,11 +575,10 @@
                 </li>
               </ul>
 
-              <!-- BOTÓN CTA DE PRECIOS -->
               <div class="pt-4">
                 <a 
                   routerLink="/auth/register" 
-                  class="btn-brand w-full inline-flex items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-semibold shadow-md"
+                  class="btn-brand w-full inline-flex items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-semibold shadow-md cursor-pointer"
                 >
                   <span>Comenzar prueba gratis</span>
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -584,8 +598,8 @@
       </div>
     </section>
 
-    <!-- ================= PREGUNTAS FRECUENTES (FAQ) ================= -->
-    <section id="faq" class="py-16 sm:py-24 bg-slate-50/70 border-t border-slate-100">
+    <!-- ================= PREGUNTAS FRECUENTES (FAQ CON EXPANSIÓN SUAVE) ================= -->
+    <section id="faq" class="scroll-mt-24 py-16 sm:py-24 bg-slate-50/70 border-t border-slate-100">
       <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-2xl mx-auto space-y-3 mb-14">
@@ -600,28 +614,34 @@
           </p>
         </div>
 
-        <!-- ACORDEÓN REACTIVO -->
         <div class="space-y-4">
           @for (faq of faqs(); track faq.question; let i = $index) {
-            <div class="rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden transition-colors">
+            <div class="rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300 hover:border-[#f8baa3]">
               <button 
                 type="button" 
                 (click)="toggleFaq(i)"
-                class="w-full flex items-center justify-between p-6 text-left font-title text-base sm:text-lg font-bold text-slate-900 hover:text-[#d67b5f] transition-colors"
+                class="w-full flex items-center justify-between p-6 text-left font-title text-base sm:text-lg font-bold text-slate-900 hover:text-[#cf7255] transition-colors cursor-pointer"
               >
                 <span>{{ faq.question }}</span>
-                <span class="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-transform duration-200" [class.rotate-180]="faq.open">
+                <span class="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-transform duration-300" [class.rotate-180]="faq.open">
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </span>
               </button>
 
-              @if (faq.open) {
-                <div class="px-6 pb-6 text-sm sm:text-base text-slate-600 leading-relaxed border-t border-slate-50 pt-3">
-                  {{ faq.answer }}
+              <!-- Acordeón con animación fluida de altura CSS -->
+              <div 
+                class="faq-grid-row"
+                [class.open]="faq.open"
+                [class.closed]="!faq.open"
+              >
+                <div class="overflow-hidden">
+                  <div class="px-6 pb-6 text-sm sm:text-base text-slate-600 leading-relaxed border-t border-slate-50 pt-3">
+                    {{ faq.answer }}
+                  </div>
                 </div>
-              }
+              </div>
             </div>
           }
         </div>
@@ -667,31 +687,61 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       
       <div class="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100">
+        
         <!-- LOGO & SLOGAN -->
-        <div class="flex items-center gap-3">
+        <a href="#" (click)="scrollToTop($event)" class="flex items-center gap-3 cursor-pointer group">
           <img 
             [src]="images.logoIcon" 
             alt="FashionStore" 
-            class="h-9 w-auto object-contain"
+            class="h-9 w-auto object-contain transition-transform group-hover:rotate-3"
             onerror="this.style.display='none'"
           />
           <div>
-            <span class="font-title text-xl font-bold text-slate-900">FASHIONSTORE</span>
+            <span class="font-title text-xl font-bold text-slate-900 group-hover:text-[#cf7255] transition-colors">FASHIONSTORE</span>
             <p class="text-xs text-slate-600">Plataforma SaaS para tiendas y marcas de moda</p>
           </div>
-        </div>
+        </a>
 
-        <!-- LINKS RÁPIDOS -->
+        <!-- LINKS RÁPIDOS CON DESPLAZAMIENTO FLUIDO -->
         <div class="flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-medium">
-          <a href="#caracteristicas" class="hover:text-slate-950 transition-colors">Características</a>
-          <a href="#como-funciona" class="hover:text-slate-950 transition-colors">Cómo funciona</a>
-          <a href="#probador-ia" class="hover:text-slate-950 transition-colors">Probador IA</a>
-          <a href="#precios" class="hover:text-slate-950 transition-colors">Precios</a>
-          <a href="#faq" class="hover:text-slate-950 transition-colors">Preguntas Frecuentes</a>
+          <a 
+            href="#caracteristicas" 
+            (click)="scrollToSection($event, 'caracteristicas')" 
+            class="hover:text-slate-950 transition-colors cursor-pointer"
+          >
+            Características
+          </a>
+          <a 
+            href="#como-funciona" 
+            (click)="scrollToSection($event, 'como-funciona')" 
+            class="hover:text-slate-950 transition-colors cursor-pointer"
+          >
+            Cómo funciona
+          </a>
+          <a 
+            href="#probador-ia" 
+            (click)="scrollToSection($event, 'probador-ia')" 
+            class="hover:text-slate-950 transition-colors cursor-pointer"
+          >
+            Probador IA
+          </a>
+          <a 
+            href="#precios" 
+            (click)="scrollToSection($event, 'precios')" 
+            class="hover:text-slate-950 transition-colors cursor-pointer"
+          >
+            Precios
+          </a>
+          <a 
+            href="#faq" 
+            (click)="scrollToSection($event, 'faq')" 
+            class="hover:text-slate-950 transition-colors cursor-pointer"
+          >
+            Preguntas Frecuentes
+          </a>
         </div>
       </div>
 
-      <!-- COPYRIGHT & CRÉDITOS -->
       <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
         <p>© 2026 FashionStore SaaS. Todos los derechos reservados.</p>
         <p>Diseño y presentación de marca para el rubro textil.</p>
@@ -699,5 +749,19 @@
 
     </div>
   </footer>
+
+  <!-- ================= BOTÓN FLOTANTE: VOLVER ARRIBA ================= -->
+  @if (isScrolled()) {
+    <button
+      type="button"
+      (click)="scrollToTop($event)"
+      aria-label="Volver arriba"
+      class="btn-back-to-top fixed bottom-6 right-6 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[#f8baa3] text-slate-950 shadow-lg cursor-pointer transition-all duration-300 hover:bg-[#f5a88e] hover:shadow-xl ring-2 ring-white/80"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+    </button>
+  }
 
 </div>

@@ -24,38 +24,90 @@
 /* Botón de marca #f8baa3 */
 .btn-brand {
   background-color: #f8baa3;
-  color: #1e1b18;
+  color: #191c21;
   font-weight: 600;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-brand:hover {
   background-color: #f5a88e;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px -6px rgba(248, 186, 163, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgba(248, 186, 163, 0.6);
+}
+
+.btn-brand:active {
+  transform: translateY(0);
 }
 
 .btn-brand-outline {
   border: 1.5px solid #f8baa3;
-  color: #1e1b18;
+  color: #191c21;
   background-color: transparent;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-brand-outline:hover {
   background-color: rgba(248, 186, 163, 0.15);
   border-color: #f5a88e;
+  transform: translateY(-2px);
 }
 
-/* Efectos de tarjeta */
+.btn-brand-outline:active {
+  transform: translateY(0);
+}
+
+/* Enlaces de navegación con indicador fluido */
+.nav-link {
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #f8baa3;
+  border-radius: 9999px;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Efectos de tarjeta con elevación fluida */
 .card-hover {
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.3s ease;
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.07);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.06), 0 0 20px -5px rgba(248, 186, 163, 0.3);
   border-color: #f8baa3;
+}
+
+/* Levitation sutil de insignias flotantes */
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-subtle 4.5s ease-in-out infinite;
+  animation-delay: 2s;
 }
 
 /* Patrón sutil de fondo */
@@ -71,7 +123,25 @@
   border: 1px solid rgba(248, 186, 163, 0.5);
 }
 
-/* Transiciones de acordeón FAQ */
-.faq-content {
-  transition: max-height 0.3s ease-out, opacity 0.25s ease;
+/* Transición fluida para el acordeón FAQ */
+.faq-grid-row {
+  display: grid;
+  transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.faq-grid-row.open {
+  grid-template-rows: 1fr;
+}
+
+.faq-grid-row.closed {
+  grid-template-rows: 0fr;
+}
+
+/* Botón flotante para volver arriba */
+.btn-back-to-top {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-back-to-top:hover {
+  transform: translateY(-3px) scale(1.05);
 }

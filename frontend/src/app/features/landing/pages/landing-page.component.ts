@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, HostListener, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 interface FaqItem {
@@ -29,13 +29,57 @@ interface FeatureItem {
   styleUrl: './landing-page.component.css',
 })
 export class LandingPageComponent {
-  // Configuración de imágenes del sitio (aquí puedes cambiar las fotos fácilmente)
+  // Configuración de imágenes del sitio
   readonly images = {
     logoIcon: '/assets/logo-fashionstore.png',
     logoName: '/assets/logo-name.png',
     heroStore: '/assets/clothes-perch-cream.jpg',
     tryOnStore: '/assets/women-store.jpg',
   };
+
+  // Estado de desplazamiento para fluidez de la navbar y botón flotante
+  readonly isScrolled = signal(false);
+
+  @HostListener('window:scroll', [])
+  onWindowScroll(): void {
+    if (typeof window !== 'undefined') {
+      this.isScrolled.set(window.scrollY > 30);
+    }
+  }
+
+  // Desplazamiento suave y preciso hacia cualquier sección
+  scrollToSection(event: Event, sectionId: string): void {
+    event.preventDefault();
+    if (typeof document === 'undefined') return;
+
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const navOffset = 85;
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - navOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+
+      // Actualiza la URL de forma limpia
+      window.history.pushState(null, '', `#${sectionId}`);
+    }
+  }
+
+  // Desplazamiento fluido al inicio (Top)
+  scrollToTop(event?: Event): void {
+    if (event) event.preventDefault();
+    if (typeof window === 'undefined') return;
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+
+    window.history.pushState(null, '', '/');
+  }
 
   // FAQ reactivo con estado abierto/cerrado
   readonly faqs = signal<FaqItem[]>([

@@ -121,7 +121,12 @@
 	--sidebar-ring: oklch(0.8 0.08 12);
 }
 
-html,
+html {
+	min-height: 100%;
+	scroll-behavior: smooth;
+	scroll-padding-top: 5.5rem;
+}
+
 body {
 	min-height: 100%;
 }
