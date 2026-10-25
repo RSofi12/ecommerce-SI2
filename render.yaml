@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: fashionstore-backend
+    env: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        # Set this in Render UI (or keep the placeholder)
+        value: "postgresql+psycopg2://neondb_owner:npg_4NnHEasV9QzO@ep-little-base-b5ckb41q-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+      - key: SECRET_KEY
+        value: "replace-with-a-local-secret"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: ALGORITHM
+        value: "HS256"
+      - key: CLOUDINARY_CLOUD_NAME
+        value: "your_cloud_name"
+      - key: CLOUDINARY_API_KEY
+        value: "your_api_key"
+      - key: CLOUDINARY_API_SECRET
+        value: "your_api_secret"
+      - key: CLOUDINARY_FOLDER
+        value: "fashionstore"
+      - key: STRIPE_SECRET_KEY
+        value: "your_stripe_secret_key"
+      - key: STRIPE_WEBHOOK_SECRET
+        value: "your_stripe_webhook_secret"
+      - key: STRIPE_PUBLISHABLE_KEY
+        value: "your_stripe_publishable_key"
+      - key: STRIPE_CURRENCY
+        value: "usd"
+      - key: GEMINI_API_KEY
+        value: "your-gemini-api-key"
+      - key: GEMINI_MODEL
+        value: "gemini-3.6-flash"
+      - key: GEMINI_TIMEOUT_SECONDS
+        value: "30"
+      - key: FIREBASE_SERVICE_ACCOUNT_PATH
+        value: "./.secrets/firebase-service-account.json"
+    autoDeploy: true
+    healthCheckPath: /health
+    plan: free
+    region: oregon
