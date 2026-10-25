@@ -7,7 +7,7 @@
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "outputDirectory": "frontend/dist/frontend"
+        "outputDirectory": "dist/frontend"
       }
     }
   ],
