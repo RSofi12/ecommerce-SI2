@@ -1,0 +1,139 @@
+# Plan de Implementación – Presentación 1 (Domingo 25/10/2026)
+
+## 1️⃣ Objetivo
+Demostrar la **base SaaS multitenant** y el **catálogo offline** mediante 10 casos de uso (CU01‑CU10) con dos empresas independientes:
+- **Boutique Elegance** (plan *Básico*, 2 sucursales).
+- **Moda Urbana** (plan *Profesional*, 4 sucursales).
+
+El flujo debe poder ejecutarse tanto desde la **PWA Angular** como desde la **app Flutter**.
+
+---
+## 2️⃣ Cambios estructurales en la base de datos
+### 2.1 Tablas que ya existen (se ampliarán)
+| Tabla | Columnas a añadir / modificar |
+|-------|------------------------------|
+| `companies` | `name VARCHAR(255) NOT NULL`, índice único `uq_companies_name`. |
+| `plans` | `id UUID PK`, `name VARCHAR`, `max_branches INT`, `allows_ia BOOLEAN`. |
+| `subscriptions` | `id UUID PK`, `tenant_id UUID FK → companies.id`, `plan_id UUID FK → plans.id`, `started_at TIMESTAMP`, `expires_at TIMESTAMP`. |
+| `users` | `tenant_id UUID FK → companies.id`, `role ENUM('admin','user','superadmin')`. |
+| `branches` | `tenant_id UUID FK`, (opcional) `plan_id UUID FK`. |
+| `products` | `tenant_id UUID FK`. |
+| `product_variants` | `tenant_id UUID FK` (heredado), `product_id UUID FK`. |
+| `inventory` | `tenant_id UUID FK`, `branch_id UUID FK`. |
+
+### 2.2 Tablas nuevas (offline / sync)
+| Tabla | Campos | Comentario |
+|-------|--------|------------|
+| `offline_operations` | `id UUID PK`, `tenant_id UUID FK`, `operation_type VARCHAR`, `payload JSON`, `created_at TIMESTAMP`, `synced BOOLEAN` | Guarda operaciones generadas sin conexión. |
+| `catalog_cache` | `id UUID PK`, `tenant_id UUID FK`, `product_id UUID FK`, `variant_id UUID FK`, `cached_at TIMESTAMP` | Soporte para IndexedDB (web) y SQLite (mobile). |
+
+---
+## 3️⃣ Migraciones Alembic (esqueleto)
+```bash
+# 1. Crear migración de campos tenant en tables existentes
+alembic revision -m "add tenant fields to core tables"
+# 2. Crear migración de planes y suscripciones
+alembic revision -m "create plans and subscriptions tables"
+# 3. Crear migración de tablas offline
+alembic revision -m "create offline_operations and catalog_cache tables"
+```
+El detalle de cada *revision* está en `docs/db_modifications_and_seed_data.md`.
+
+---
+## 4️⃣ Datos de **seed** (script `backend/scripts/seed_data.py`)
+```python
+TENANTS = [
+    {"id": "11111111-1111-1111-1111-111111111111", "name": "Boutique Elegance"},
+    {"id": "22222222-2222-2222-2222-222222222222", "name": "Moda Urbana"},
+]
+PLANS = [
+    {"id": "p-basic", "name": "Básico", "max_branches": 2, "allows_ia": False},
+    {"id": "p-pro",   "name": "Profesional", "max_branches": 10, "allows_ia": True},
+]
+SUBSCRIPTIONS = [
+    {"id": "sub-1", "tenant_id": TENANTS[0]["id"], "plan_id": "p-basic",  "started_at": "2026-10-01T00:00:00Z"},
+    {"id": "sub-2", "tenant_id": TENANTS[1]["id"], "plan_id": "p-pro",    "started_at": "2026-10-01T00:00:00Z"},
+]
+USERS = [
+    {"id": "u1", "tenant_id": TENANTS[0]["id"], "email": "admin@elegance.com",    "role": "admin", "hashed_password": "<hash>"},
+    {"id": "u2", "tenant_id": TENANTS[1]["id"], "email": "admin@modaurbana.com", "role": "admin", "hashed_password": "<hash>"},
+]
+# Insertar también productos, variantes, sucursales e inventario (ver sección 5).
+```
+> **Credenciales de prueba**: `admin@elegance.com` y `admin@modaurbana.com` con contraseña **Pass123!**.
+
+---
+## 5️⃣ Catálogo de productos de prueba
+Crear 5 productos, cada uno con 2‑3 variantes, asignados a cada tenant mediante `tenant_id`. Ejemplo (JSON simplificado):
+```json
+[
+  {"id": "prd-1", "tenant_id": "11111111-1111-1111-1111-111111111111", "name": "Camisa Casual", "variants": [
+      {"id": "var-1a", "size": "S", "price": 35},
+      {"id": "var-1b", "size": "M", "price": 38}
+  ]},
+  {"id": "prd-2", "tenant_id": "22222222-2222-2222-2222-222222222222", "name": "Jeans Slim", "variants": [
+      {"id": "var-2a", "size": "32", "price": 60},
+      {"id": "var-2b", "size": "34", "price": 62},
+      {"id": "var-2c", "size": "36", "price": 64}
+  ]}
+]
+```
+Poblar también **inventario** por sucursal (`branch_id`, `product_id`, `quantity`).
+
+---
+## 6️⃣ Flujo de pruebas (Web PWA & App Flutter)
+### 6.1 Preparación (una sola vez)
+1. Ejecutar migraciones: `alembic upgrade head`.
+2. Correr seed: `python backend/scripts/seed_data.py`.
+3. Levantar backend: `uvicorn backend.main:app --reload`.
+4. Levantar frontend Angular: `npm run dev` desde `frontend/`.
+5. (Opcional) Ejecutar app Flutter en emulador.
+
+### 6.2 Escenario de demostración
+| Paso | Acción del usuario | Endpoint / componente implicado | Resultado esperado |
+|------|-------------------|--------------------------------|--------------------|
+| 1 | **Login** como `admin@elegance.com` (Pass123!) | `POST /auth/login` → JWT con `tenant_id` | Token válido, `tenant_id = 111...`. |
+| 2 | **Gestionar Empresas** (CU01) – listar tenants | `GET /tenants` (solo superadmin) | Aparecen “Boutique Elegance” y “Moda Urbana”. |
+| 3 | **Cambiar plan** (CU02) – pasar a *Profesional* | `PUT /subscriptions/{sub_id}` | `max_branches` pasa a 10, se actualiza. |
+| 4 | **Crear sucursal** (CU04) – intentar crear 3ª sucursal en Boutique (plan Básico) | `POST /branches` | **Error** 400: límite de sucursales excedido. |
+| 5 | **Crear sucursal** en Moda Urbana (plan Pro) – crear 4ª sucursal | `POST /branches` | Sucursal creada sin error. |
+| 6 | **Consultar/Actualizar perfil** (CU05) – cambiar nombre | `GET /users/me`, `PUT /users/me` | Datos actualizados en tabla `users`. |
+| 7 | **Gestionar catálogo** (CU06) – añadir nuevo producto a Boutique | `POST /products` | Producto con `tenant_id = 111...` visible solo para ese tenant. |
+| 8 | **Filtrar catálogo** (CU07) – buscar “Camisa” | `GET /products?search=camisa` | Resultado solo de la empresa logueada. |
+| 9 | **Descargar catálogo** (CU08) – sincronizar con IndexedDB | Service Worker ejecuta `GET /products` → almacena en `catalog_cache`. |
+|10| **Modo offline** (CU09) – desconectar red, abrir app, consultar catálogo | Lectura desde `catalog_cache` / `offline_operations` | Catálogo visible, operaciones de carrito se guardan en `offline_operations`. |
+|11| **Consultar disponibilidad** (CU10) – ver stock por sucursal | `GET /inventory?branch_id={id}` | Cantidad mostrada según tabla `inventory`. |
+
+### 6.3 Verificación final
+- Cada tenant solo ve sus propios datos (aislamiento multitenant).
+- Los límites de sucursales se respetan según el plan.
+- La PWA muestra el catálogo offline después de la primera sincronización.
+- La app Flutter muestra el mismo comportamiento usando SQLite.
+
+---
+## 7️⃣ Tareas de desarrollo (lista de *issues*)
+1. **DB** – Implementar migraciones Alembic (ver sección 3). ✔
+2. **Seed** – Codificar `seed_data.py` y validar inserción. ✔
+3. **Backend** – Añadir lógica de validación de `max_branches` en el router de `branches`.
+4. **Backend** – Endpoints de sincronización offline (`/offline/operations`, `/catalog/cache`).
+5. **Frontend Angular** – UI de login, gestión de sucursales, catálogo y modo offline (Service Worker).
+6. **Flutter** – Replicar los mismos endpoints y lógica de cache con `sqflite`.
+7. **Tests** – Pruebas unitarias y e2e para los 10 CU.
+8. **Documentación** – Actualizar `README.md` con pasos de despliegue y credenciales de prueba.
+
+---
+## 8️⃣ Checklist para la presentación
+- [ ] Base de datos migrada y seed ejecutado.
+- [ ] Backend corriendo con validaciones de plan y multitenant.
+- [ ] Frontend PWA disponible en `http://localhost:3000` y con Service Worker activo.
+- [ ] App Flutter compilada y corriendo en emulador.
+- [ ] Demo de los 10 CU siguiendo el flujo de la tabla **6.2**.
+- [ ] Slides / captura de pantalla listos para la presentación.
+
+---
+### Notas finales
+- **Contraseñas** en el seed son placeholders; generar hashes reales con `bcrypt` antes de la demo.
+- Incluir siempre `tenant_id` en JWT y en los encabezados de las peticiones.
+- El **modo offline** depende del Service Worker (Angular) y de `sqflite` en Flutter; ambos usan la tabla `catalog_cache`.
+
+> **Este archivo (`first_presentation_plan.txt`) será la guía de trabajo**. Cuando solicites iniciar la implementación, seguiré este plan paso a paso.

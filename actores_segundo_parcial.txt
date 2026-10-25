@@ -1,0 +1,135 @@
+================================================================================
+IDENTIFICACION DE ACTORES - SEGUNDO PARCIAL (METODOLOGIA ICONIX)
+PLATAFORMA E-COMMERCE SAAS MULTITENANT
+================================================================================
+
+1. CLASIFICACION GENERAL DE ACTORES
+Los actores se dividen en dos niveles jerarquicos (Nivel Plataforma SaaS y Nivel Tenant/Empresa),
+ademas de Actores de Sistema automatizados:
+
+--------------------------------------------------------------------------------
+A. NIVEL PLATAFORMA SAAS (ADMINISTRACION GLOBAL)
+--------------------------------------------------------------------------------
+1. Superadmin Plataforma (Administrador Global SaaS):
+   - Descripcion: Usuario con el maximo nivel de privilegio en el sistema. Es el
+     responsable de gestionar las empresas suscritas (tenants), supervisar y configurar
+     los planes de suscripcion (Basico, Profesional), definir los limites comerciales y
+     monitorear la operacion global de la infraestructura.
+   - Casos de Uso en los que participa:
+     * CU01: Gestionar Empresas (Tenants) y Administradores.
+     * CU02: Gestionar Planes de Suscripcion y Limites.
+     * CU22: Visualizar Dashboard Analitico Inteligente (Metricas globales).
+
+--------------------------------------------------------------------------------
+B. NIVEL TENANT / EMPRESA CONTRATANTE (ORGANIZACION INDEPENDIENTE)
+--------------------------------------------------------------------------------
+2. Administrador Tenant (Administrador de la Empresa):
+   - Descripcion: Usuario designado por cada empresa cliente como responsable general de
+     su entorno logico. Administra sus sucursales (respetando los limites de su plan),
+     los usuarios internos, el catalogo de productos de su marca, consulta el estado de su
+     suscripcion y accede a reportes generativos con IA y dashboards estrategicos.
+   - Casos de Uso en los que participa:
+     * CU02: Gestionar Planes de Suscripcion y Limites (Consultar estado / solicitar cambio de plan).
+     * CU03: Autenticar Usuario en Contexto Multitenant.
+     * CU04: Gestionar Sucursales bajo Reglas de Suscripcion.
+     * CU05: Gestionar Catalogo de Productos Aislado por Tenant.
+     * CU15: Gestionar Codigos Promocionales y Cupones por Tenant.
+     * CU16: Solicitar Reportes Generativos en Lenguaje Natural (Texto/Voz).
+     * CU18: Presentar y Exportar Reportes Dinamicos (PDF / Excel).
+     * CU22: Visualizar Dashboard Analitico Inteligente.
+
+3. Encargado de Sucursal:
+   - Descripcion: Empleado asignado a una sucursal fisica especifica. Supervisa la
+     atencion de reservas de prendas, autoriza cambios de ropa devueltos dentro de plazo,
+     revisa los inventarios locales y resuelve incidencias o conflictos de inventario
+     derivados de sincronizaciones offline.
+   - Casos de Uso en los que participa:
+     * CU03: Autenticar Usuario en Contexto Multitenant.
+     * CU09: Registrar Reserva de Prendas Offline.
+     * CU10: Consultar Registro de Operaciones Locales Pendientes.
+     * CU13: Detectar y Gestionar Conflictos de Inventario Offline (Resolucion administrativa).
+     * CU14: Gestionar Cambios de Prendas de Vestir.
+     * CU15: Gestionar Codigos Promocionales y Cupones por Tenant.
+
+4. Cajero / Vendedor:
+   - Descripcion: Personal de atencion directa en punto de venta (POS) y caja de la
+     sucursal. Opera la aplicacion web (PWA) o terminal movil para consultar disponibilidad,
+     registrar ventas al contado de forma offline cuando se interrumpe la conexion y
+     activar la sincronizacion de transacciones pendientes.
+   - Casos de Uso en los que participa:
+     * CU03: Autenticar Usuario en Contexto Multitenant.
+     * CU06: Descargar y Almacenar Catalogo en Cache Local (IndexedDB / SQLite).
+     * CU07: Consultar Catalogo y Disponibilidad Local en Modo Offline.
+     * CU08: Registrar Venta de Contado Offline.
+     * CU10: Consultar Registro de Operaciones Locales Pendientes.
+     * CU11: Sincronizar Operaciones Comerciales con el Backend (Disparo manual/local).
+     * CU14: Gestionar Cambios de Prendas de Vestir.
+
+5. Cliente:
+   - Descripcion: Consumidor final de prendas de vestir de una empresa en particular.
+     Navega por el catalogo desde la PWA o App Movil, consulta disponibilidad por sucursal
+     incluso sin conexion y genera reservas para probador o compras digitales.
+   - Casos de Uso en los que participa:
+     * CU03: Autenticar Usuario en Contexto Multitenant.
+     * CU06: Descargar y Almacenar Catalogo en Cache Local (IndexedDB / SQLite).
+     * CU07: Consultar Catalogo y Disponibilidad Local en Modo Offline.
+     * CU09: Registrar Reserva de Prendas Offline.
+
+--------------------------------------------------------------------------------
+C. ACTORES DEL SISTEMA (PROCESOS Y SERVICIOS AUTOMATIZADOS)
+--------------------------------------------------------------------------------
+6. Sistema (Background Sync):
+   - Descripcion: Agente de software o servicio en segundo plano (Service Worker en PWA
+     o WorkManager/Background service en Flutter) que detecta la recuperacion de la
+     conectividad a internet y gestiona el envio automatico y reintentos de la cola de
+     operaciones pendientes hacia el backend.
+   - Casos de Uso en los que participa:
+     * CU11: Sincronizar Operaciones Comerciales con el Backend.
+
+7. Backend (API Sync & Transaction Manager):
+   - Descripcion: Componente central del servidor en FastAPI que recibe las operaciones
+     sincronizadas, valida la idempotencia de transacciones (evitando duplicaciones),
+     aplica la integridad transaccional de inventario y detecta disputas/conflictos de stock.
+   - Casos de Uso en los que participa:
+     * CU12: Procesar y Confirmar Operaciones con Idempotencia.
+     * CU13: Detectar y Gestionar Conflictos de Inventario Offline.
+
+8. Modulo de Inteligencia Artificial & ML:
+   - Descripcion: Servicio analitico integrado que procesa lenguaje natural (texto y voz),
+     ejecuta modelos supervisados (prediccion de demanda/ventas) y no supervisados
+     (clustering y anomalias), y sintetiza datos restringidos estrictamente al tenant.
+   - Casos de Uso en los que participa:
+     * CU17: Ejecutar Consulta Controlada y Segura de Datos con IA.
+     * CU19: Generar y Preparar Datos Sinteticos para Modelos de ML.
+     * CU20: Ejecutar Modelo Supervisado (Prediccion de Demanda / Ventas).
+     * CU21: Ejecutar Modelo No Supervisado (Segmentacion / Deteccion de Anomalias).
+
+================================================================================
+MATRIZ RESUMEN: CASOS DE USO VS ACTORES
+================================================================================
+
+CU     Nombre del Caso de Uso                               Actores Principales
+--------------------------------------------------------------------------------------------------------
+CU01   Gestionar Empresas (Tenants) y Administradores       Superadmin Plataforma
+CU02   Gestionar Planes de Suscripcion y Limites            Superadmin Plataforma, Administrador Tenant
+CU03   Autenticar Usuario en Contexto Multitenant           Todos los usuarios (Superadmin, Admin, etc.)
+CU04   Gestionar Sucursales bajo Reglas de Suscripcion      Administrador Tenant
+CU05   Gestionar Catalogo de Productos Aislado por Tenant   Administrador Tenant
+CU06   Descargar y Almacenar Catalogo en Cache Local        Cajero/Vendedor, Cliente
+CU07   Consultar Catalogo y Disponibilidad Offline          Cajero/Vendedor, Cliente
+CU08   Registrar Venta de Contado Offline                   Cajero/Vendedor
+CU09   Registrar Reserva de Prendas Offline                 Cliente, Encargado de Sucursal
+CU10   Consultar Operaciones Locales Pendientes             Cajero/Vendedor, Encargado de Sucursal
+CU11   Sincronizar Operaciones con el Backend               Sistema (Background Sync), Cajero
+CU12   Procesar y Confirmar con Idempotencia                Backend (API Sync)
+CU13   Detectar y Gestionar Conflictos de Inventario        Backend (API Sync), Encargado de Sucursal
+CU14   Gestionar Cambios de Prendas de Vestir               Cajero, Encargado de Sucursal
+CU15   Gestionar Codigos Promocionales y Cupones            Administrador Tenant, Encargado
+CU16   Solicitar Reportes Generativos (Texto/Voz)           Administrador Tenant
+CU17   Ejecutar Consulta Controlada y Segura con IA         Modulo IA & ML, Backend
+CU18   Presentar y Exportar Reportes Dinamicos              Administrador Tenant
+CU19   Generar y Preparar Datos Sinteticos para ML          Modulo IA & ML, Sistema
+CU20   Ejecutar Modelo Supervisado (Prediccion)             Modulo IA & ML
+CU21   Ejecutar Modelo No Supervisado (Clustering)          Modulo IA & ML
+CU22   Visualizar Dashboard Analitico Inteligente           Administrador Tenant, Superadmin
+================================================================================

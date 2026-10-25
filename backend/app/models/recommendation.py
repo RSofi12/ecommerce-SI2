@@ -1,7 +1,7 @@
 # Legacy compatibility shim - Canonical location: app.packages.p6_inteligencia_analitica.models.recommendation
 from app.packages.p6_inteligencia_analitica.models.recommendation import (
-    ProductInteraction,
-    RecommendationModelMetadata,
+    UserProductInteraction,
+    CollaborativeEmbedding,
 )
 
-__all__ = ["ProductInteraction", "RecommendationModelMetadata"]
+__all__ = ["UserProductInteraction", "CollaborativeEmbedding"]

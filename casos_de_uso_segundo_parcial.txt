@@ -1,0 +1,202 @@
+================================================================================
+PROPUESTA DE CASOS DE USO EN 3 CICLOS - SEGUNDO PARCIAL (METODOLOGIA ICONIX)
+PLATAFORMA E-COMMERCE SAAS MULTITENANT
+================================================================================
+
+RESUMEN DE CICLOS:
+- Ciclo #1: Núcleo SaaS Multitenant, Aislamiento de Datos y Persistencia Offline (IndexedDB / SQLite)
+- Ciclo #2: Operaciones Comerciales Offline (Ventas/Reservas), Motor de Sincronización e Idempotencia
+- Ciclo #3: Analítica Inteligente con Machine Learning y Reportes Generativos con IA (Texto/Voz)
+
+--------------------------------------------------------------------------------
+CICLO #1: EVOLUCIÓN SAAS MULTITENANT, AISLAMIENTO DE DATOS Y BASE OFFLINE
+Foco: Transformar la arquitectura central en multi-empresa, incorporar planes de
+suscripción con control de límites y preparar la persistencia local en clientes web
+(PWA - IndexedDB) y móvil (Flutter - SQLite).
+--------------------------------------------------------------------------------
+
+CU01: Gestionar Empresas (Tenants) y Administradores
+- Actores: Superadmin Plataforma
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: Registrar nuevas empresas contratantes, generar su entorno lógico
+  independiente, asignar su usuario administrador inicial y configurar datos
+  fiscales/comerciales.
+
+CU02: Gestionar Planes de Suscripción y Límites
+- Actores: Superadmin Plataforma, Administrador Tenant
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: Crear y asignar planes (Básico vs Profesional). Control de reglas:
+  límite de sucursales activas (2 vs 10), habilitación de reportes IA, verificación
+  de vigencia y cambio de plan.
+
+CU03: Autenticar Usuario en Contexto Multitenant
+- Actores: Todos los usuarios
+- Plataforma: Web / Móvil
+- Tipo: Obligatorio
+- Descripción: Autenticación con JWT que inyecta en el payload el tenant_id, rol y
+  branch_id. Garantiza que cada petición quede automáticamente aislada en el backend.
+
+CU04: Gestionar Sucursales bajo Reglas de Suscripción
+- Actores: Administrador Tenant
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: Registrar/editar sucursales verificando en backend que no se exceda
+  el cupo máximo del plan contratado (RNF02 y RNF01).
+
+CU05: Gestionar Catálogo de Productos Aislado por Tenant
+- Actores: Administrador Tenant
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: CRUD de productos, variantes, categorías, tallas y colores
+  pertenecientes estrictamente al tenant activo, impidiendo accesos cruzados.
+
+CU06: Descargar y Almacenar Catálogo en Caché Local (IndexedDB / SQLite)
+- Actores: Vendedor / Cajero, Cliente
+- Plataforma: Web PWA / Móvil
+- Tipo: Obligatorio
+- Descripción: Descarga inicial y delta del catálogo y precios conocidos hacia
+  IndexedDB (Web) y SQLite (Flutter) para habilitar navegación offline.
+  Identificación visual de datos almacenados localmente.
+
+CU07: Consultar Catálogo y Disponibilidad Local en Modo Offline
+- Actores: Vendedor / Cajero, Cliente
+- Plataforma: Web PWA / Móvil
+- Tipo: Obligatorio
+- Descripción: Búsqueda y filtrado de productos sin conexión a internet. Indicador
+  visual explícito advirtiendo: "Modo offline: la disponibilidad puede diferir del stock central".
+
+--------------------------------------------------------------------------------
+CICLO #2: VENTAS Y RESERVAS OFFLINE, MOTOR DE SINCRONIZACIÓN E IDEMPOTENCIA
+Foco: Permitir que las tiendas sigan vendiendo en caja (al contado) y reservando
+prendas aunque se corte internet, sincronizando al reconectar y gestionando
+conflictos de inventario.
+--------------------------------------------------------------------------------
+
+CU08: Registrar Venta de Contado Offline
+- Actores: Cajero / Vendedor
+- Plataforma: Web PWA / Móvil
+- Tipo: Obligatorio
+- Descripción: Registro de venta en efectivo sin internet. Generación de UUID local,
+  registro de fecha/hora, variantes, precios y totales. Rebaja preventiva del stock
+  local y estado: PENDIENTE_SYNC.
+
+CU09: Registrar Reserva de Prendas Offline
+- Actores: Cliente, Encargado Sucursal
+- Plataforma: Web PWA / Móvil
+- Tipo: Obligatorio
+- Descripción: Crear reserva con tiempo de vigencia en almacenamiento local mientras
+  no haya internet. Se encola con identificador único y datos del cliente.
+
+CU10: Consultar Registro de Operaciones Locales Pendientes
+- Actores: Cajero, Encargado Sucursal
+- Plataforma: Web PWA / Móvil
+- Tipo: Obligatorio
+- Descripción: Bandeja local que lista ventas y reservas registradas offline con sus
+  estados: REGISTRADA_LOCAL, ENVIADA, CONFIRMADA, EN_CONFLICTO. Los datos sobreviven
+  al cierre/reinicio de la app.
+
+CU11: Sincronizar Operaciones Comerciales con el Backend
+- Actores: Sistema (Background Sync), Cajero
+- Plataforma: Web PWA / Móvil
+- Tipo: Obligatorio
+- Descripción: Al restablecerse internet (evento online o botón manual), envío en lote
+  de operaciones pendientes. Incluye reintentos automáticos sin borrar operaciones
+  locales si el servidor falla (RNF06).
+
+CU12: Procesar y Confirmar Operaciones con Idempotencia
+- Actores: Backend (API Sync)
+- Plataforma: Backend
+- Tipo: Obligatorio
+- Descripción: Validación transaccional en el servidor. Si el UUID ya fue procesado,
+  devuelve éxito sin duplicar registros de venta ni movimientos de stock (RNF05 e
+  integridad RNF04).
+
+CU13: Detectar y Gestionar Conflictos de Inventario Offline
+- Actores: Backend, Encargado Sucursal
+- Plataforma: Web / Backend
+- Tipo: Obligatorio
+- Descripción: Tratamiento cuando dos terminales offline vendieron la misma última
+  unidad: el servidor marca la venta en conflicto, notifica al encargado y permite
+  resolución administrativa.
+
+CU14: Gestionar Cambios de Prendas de Vestir
+- Actores: Cajero, Encargado Sucursal
+- Plataforma: Web
+- Tipo: Requerimiento específico (Pág. 5 del pliego)
+- Descripción: Registrar cambio físico de prenda (por otra talla/color o nota de crédito)
+  dentro del plazo permitido, ajustando los movimientos de inventario de la sucursal.
+
+CU15: Gestionar Códigos Promocionales y Cupones por Tenant
+- Actores: Administrador Tenant, Encargado
+- Plataforma: Web / Móvil
+- Tipo: Extensión / Alcance
+- Descripción: Aplicar cupones de descuento (globales o por sucursal) al registrar
+  ventas o carritos, validando vigencia y restricciones de uso.
+
+--------------------------------------------------------------------------------
+CICLO #3: INTELIGENCIA ARTIFICIAL GENERATIVA, MACHINE LEARNING Y ANALÍTICA
+Foco: Potenciar el sistema con consultas en lenguaje natural (texto y voz), modelos
+de predicción y agrupamiento con ML, dashboards ejecutivos y exportación de reportes
+formales.
+--------------------------------------------------------------------------------
+
+CU16: Solicitar Reportes Generativos en Lenguaje Natural (Texto/Voz)
+- Actores: Administrador Tenant, Gerente
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: Entrada por texto o dictado por voz (Web Speech API). Interpretación
+  semántica de la consulta (identificación de intención, fechas, sucursales y métricas).
+
+CU17: Ejecutar Consulta Controlada y Segura de Datos con IA
+- Actores: Backend (Módulo IA)
+- Plataforma: Backend
+- Tipo: Obligatorio
+- Descripción: El backend valida y traduce la solicitud a consultas SQL seguras
+  (solo SELECT) forzando el filtro estricto "WHERE tenant_id = :current_tenant". Manejo
+  de solicitudes ambiguas o no soportadas (Seguridad 8.4).
+
+CU18: Presentar y Exportar Reportes Dinámicos (PDF / Excel)
+- Actores: Administrador Tenant
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: Renderizado del reporte con tablas dinámicas y gráficos seleccionados
+  automáticamente (barras, líneas, pie). Opciones de exportación a PDF y Excel con
+  formato formal de reporte corporativo.
+
+CU19: Generar y Preparar Datos Sintéticos para Modelos de ML
+- Actores: Sistema / Data Engineer
+- Plataforma: Backend / Scripts
+- Tipo: Obligatorio (Puntos 8.4 y 8.5)
+- Descripción: Generación de dataset sintético basado en el modelo transaccional de
+  WomenStyle para preprocesamiento y entrenamiento de algoritmos de ML.
+
+CU20: Ejecutar Modelo Supervisado (Predicción de Demanda / Ventas)
+- Actores: Sistema / Módulo ML
+- Plataforma: Backend
+- Tipo: Obligatorio (Puntos 8.4 y 8.5)
+- Descripción: Entrenamiento y ejecución de modelo supervisado para predecir demanda
+  de prendas o tendencia de ventas semanales/mensuales por sucursal y categoría.
+
+CU21: Ejecutar Modelo No Supervisado (Segmentación / Detección de Anomalías)
+- Actores: Sistema / Módulo ML
+- Plataforma: Backend
+- Tipo: Obligatorio (Puntos 8.4 y 8.5)
+- Descripción: Agrupamiento (clustering) de clientes por hábitos de compra o detección
+  de anomalías en inventario/ventas sin etiquetas previas.
+
+CU22: Visualizar Dashboard Analítico Inteligente
+- Actores: Administrador Tenant, Superadmin
+- Plataforma: Web
+- Tipo: Obligatorio
+- Descripción: Panel ejecutivo que unifica los KPIs del tenant, resultados de los
+  modelos predictivos de ML, métricas de evaluación del modelo y gráficos interactivos.
+
+================================================================================
+ALINEACIÓN CON FECHAS DE ENTREGA Y METODOLOGÍA ICONIX:
+1. Presentación 1 (25/10/2026): Ciclo #1 completo (SaaS Multitenant + Cache Offline).
+2. Presentación 2 (01/11/2026): Ciclo #2 completo (Ventas Offline + Sync + Idempotencia).
+3. Presentación 3 (08/11/2026): Ciclo #3 completo (IA Generativa + Modelos ML + Dashboard).
+4. Defensa Final: Martes 10 de Noviembre de 2026 a horas 7:00.
+================================================================================
