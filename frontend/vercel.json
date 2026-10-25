@@ -20,6 +20,10 @@
       "dest": "https://ecommerce-si2.onrender.com/health"
     },
     {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
