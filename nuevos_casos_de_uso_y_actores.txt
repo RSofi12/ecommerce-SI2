@@ -1,0 +1,352 @@
+================================================================================
+LISTA CONSOLIDADA Y OPTIMIZADA DE CASOS DE USO (MÁXIMO 28 CUs)
+SEGUNDO PARCIAL — METODOLOGÍA ICONIX
+PLATAFORMA E-COMMERCE SAAS MULTITENANT (FASHIONSTORE)
+================================================================================
+
+1. POLÍTICAS DE NEGOCIO Y REGLAS CLAVE INCORPORADAS
+--------------------------------------------------------------------------------
+1. Política de Cambio de Prenda por Talla y Precio:
+   Al cambiar una prenda por otra talla o modelo (ej. Talla M a Bs 50 por Talla L a Bs 70),
+   el cambio se procesa y consolida ÚNICAMENTE si el cliente paga la diferencia (Bs 20).
+   Si no paga la diferencia, se cancela el cambio y se devuelve la prenda o el monto.
+2. Política de Devoluciones (50% - 80% de reembolso):
+   Si el cliente devuelve una prenda dentro del plazo comercial establecido, la empresa
+   retiene entre el 20% y 50% por costos operativos y acondicionamiento, reembolsando
+   entre el 50% y 80% del valor pagado en efectivo o nota de crédito.
+3. Aportes Propios / Extras Requeridos por la Docente (Pág. 5 del pliego):
+   - Extra 1: Gestión de Cambios de prendas con ajuste de diferencia por talla (CU19).
+   - Extra 2: Visualización y Geolocalización de Sucursales con OpenStreetMap en Móvil (CU21).
+4. Restricción Operativa Offline:
+   Ventas presenciales offline obligatoriamente de contado (efectivo), con persistencia
+   en IndexedDB (PWA) y SQLite (Flutter).
+
+================================================================================
+2. COBERTURA TOTAL DE REQUISITOS FUNCIONALES (RF DEL EXAMEN)
+================================================================================
+RF-SaaS-01: Aislamiento lógico multi-tenant en backend y base de datos -> CU01, CU02, CU03, CU04, CU06
+RF-SaaS-02: Gestión y asignación de empresas contratantes -> CU01
+RF-SaaS-03: Planes de suscripción (Básico vs Profesional, límites de sucursales) -> CU02, CU04
+RF-Cat-01: Catálogo de productos, variantes y atributos aislados por tenant -> CU06, CU07
+RF-PWA-01: PWA instalable con Service Worker y Web App Manifest -> CU08, CU09, CU15
+RF-Off-01: Descarga y almacenamiento en caché local (IndexedDB y SQLite) -> CU08
+RF-Off-02: Consulta de productos, precios y disponibilidad local conocida -> CU09
+RF-Off-03: Registro de reservas sin conexión a Internet -> CU13
+RF-Off-04: Registro de ventas de contado (efectivo) sin conexión -> CU16
+RF-Off-05: Bandeja de consulta de operaciones locales pendientes -> CU17
+RF-Off-06: Conservación de datos tras cierre/reinicio (persistencia local) -> CU08, CU13, CU16
+RF-Sync-01: Identificación única de operaciones (UUIDv4) e idempotencia -> CU16, CU18
+RF-Sync-02: Sincronización automática/manual al recuperar conectividad -> CU18
+RF-Sync-03: Detección y tratamiento administrativo de conflictos de stock -> CU14
+RF-Pos-01: Venta presencial y cobro en caja física (online) -> CU15
+RF-Dev-01: Devoluciones con retención (50%-80%) y reintegro al inventario -> CU20
+RF-Extra-01: Cambios de prendas con abono de diferencia de precio -> CU19
+RF-Extra-02: Visualización de sucursales en mapa con OpenStreetMap (móvil) -> CU21
+RF-AR-01: Probador virtual con Realidad Aumentada (preservado) -> CU22
+RF-AI-01: Solicitud de reportes en lenguaje natural (texto y comandos de voz) -> CU23
+RF-AI-02: Interpretación de filtros y consultas SQL seguras en backend -> CU23
+RF-AI-03: Presentación dinámica en tablas y gráficos, y exportación a PDF/Excel -> CU24
+RF-ML-01: Generación y preparación de datos sintéticos estacionales -> CU25
+RF-ML-02: Modelo predictivo supervisado de demanda/ventas por sucursal -> CU26
+RF-ML-03: Modelo no supervisado de segmentación (K-Means) y detección de anomalías -> CU27
+RF-Dash-01: Dashboard analítico ejecutivo con KPIs e indicadores de ML -> CU28
+
+================================================================================
+3. LISTA MAESTRA DE LOS 28 CASOS DE USO CLASIFICADOS POR PARCIAL Y PAQUETES
+================================================================================
+
+--------------------------------------------------------------------------------
+PAQUETE 1: GESTIÓN DE USUARIOS, ACCESO Y MULTITENANCY
+--------------------------------------------------------------------------------
+CU01: Gestionar Empresas Contratantes (Tenants) [2do Parcial - NUEVO]
+- Plataforma: Web
+- Actores: Superadmin Plataforma, Backend
+- Descripción: Alta y configuración de nuevas empresas comerciales en el modelo SaaS,
+  asignando tenant_id, razón social, NIT y creando la cuenta del Administrador Tenant.
+
+CU02: Gestionar Planes de Suscripción y Límites Comerciales [2do Parcial - NUEVO]
+- Plataforma: Web
+- Actores: Superadmin Plataforma, Administrador Tenant, Backend
+- Descripción: Configuración y control de planes (Básico: máx. 2 sucursales; Profesional: máx. 10 sucursales
+  y módulo IA). Consulta de cupos utilizados y cambio de plan.
+
+CU03: Autenticar Usuario en Contexto Multitenant [1er Parcial - MODIFICADO]
+- Plataforma: Web / Móvil
+- Actores: Todos los usuarios (Superadmin, Admin Tenant, Encargado, Cajero, Cliente), Backend
+- Modificación: Validación de credenciales y emisión de token JWT firmado que inyecta
+  obligatoriamente los claims {tenant_id, role, branch_id}.
+
+CU04: Gestionar Sucursales bajo Reglas de Suscripción [1er Parcial - MODIFICADO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Backend
+- Modificación: Alta de tiendas físicas validando en backend que el total de sucursales activas
+  no sobrepase el límite contratado en el plan (2 o 10 sucursales).
+
+CU05: Consultar y Actualizar Perfil de Usuario [1er Parcial - MODIFICADO]
+- Plataforma: Web / Móvil
+- Actores: Cliente, Empleados, Backend
+- Modificación: Consulta y edición de datos personales con aislamiento estricto por tenant.
+
+--------------------------------------------------------------------------------
+PAQUETE 2: GESTIÓN DE PRODUCTOS Y CATÁLOGO AISLADO
+--------------------------------------------------------------------------------
+CU06: Gestionar Catálogo de Productos y Variantes por Tenant [1er Parcial - MODIFICADO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Backend
+- Modificación: Administración de categorías, temporadas, colecciones y prendas con variantes
+  (SKU, talla, color, precio diferenciado), aisladas lógicamente para la empresa activa.
+
+CU07: Consultar y Filtrar Catálogo en Línea [1er Parcial - MODIFICADO]
+- Plataforma: Web / Móvil
+- Actores: Cliente, Cajero / Vendedor, Backend
+- Modificación: Búsqueda y filtrado multicriterio de prendas dentro del entorno del tenant.
+
+--------------------------------------------------------------------------------
+PAQUETE 3: GESTIÓN DE INVENTARIO Y DISPONIBILIDAD MULTISUCURSAL
+--------------------------------------------------------------------------------
+CU08: Descargar y Almacenar Catálogo en Caché Local (IndexedDB / SQLite) [2do Parcial - NUEVO]
+- Plataforma: Web PWA / Móvil
+- Actores: Cajero / Vendedor, Cliente, Service Worker, SQLite Local
+- Descripción: Descarga del catálogo y existencias conocidas hacia IndexedDB (web) y SQLite (Flutter)
+  para garantizar la persistencia local requerida para operar sin internet.
+
+CU09: Consultar Catálogo y Disponibilidad Local en Modo Offline [2do Parcial - NUEVO]
+- Plataforma: Web PWA / Móvil
+- Actores: Cajero / Vendedor, Cliente, Base de Datos Local
+- Descripción: Consulta y búsqueda de productos en la base de datos local durante caídas de red,
+  con indicador visual de advertencia ("Modo offline: existencias locales").
+
+CU10: Consultar Disponibilidad de Prendas por Sucursal [1er Parcial - MODIFICADO]
+- Plataforma: Web / Móvil
+- Actores: Cliente, Cajero / Vendedor, Backend
+- Modificación: Consulta en tiempo real de stock físico y reservado entre distintas tiendas de la cadena.
+
+CU11: Registrar Movimiento de Inventario y Traspasos [1er Parcial - MODIFICADO]
+- Plataforma: Web
+- Actores: Encargado de Sucursal, Cajero, Backend
+- Modificación: Entradas, salidas y traspasos de mercadería entre sucursales autorizadas de la misma empresa.
+
+--------------------------------------------------------------------------------
+PAQUETE 4: GESTIÓN DE COMPRAS, RESERVAS Y CARRITO
+--------------------------------------------------------------------------------
+CU12: Gestionar Carrito y Compra Digital con Pasarela Stripe [1er Parcial - MODIFICADO]
+- Plataforma: Web / Móvil
+- Actores: Cliente, Backend, Pasarela Stripe
+- Modificación: Selección de prendas, cupones y checkout electrónico con Stripe. Despacho condicionado a pago confirmado.
+
+CU13: Registrar Reserva de Prendas (En Línea y Offline) [2do Parcial - NUEVO / INTEGRADO]
+- Plataforma: Web PWA / Móvil
+- Actores: Cliente, Encargado de Sucursal, Backend, Base de Datos Local
+- Descripción: Reserva de prendas con vigencia temporal para prueba en vestidor físico. Funciona con
+  conexión central y también en modo offline guardándose localmente para sincronización.
+
+CU14: Atender Reserva y Resolver Conflictos de Stock [1er Parcial - MODIFICADO / 2do Parcial]
+- Plataforma: Web
+- Actores: Encargado de Sucursal, Cliente, Backend
+- Modificación: Separación de prendas en tienda y resolución administrativa cuando una reserva o
+  venta offline sincronizada choca por falta de stock central (traspaso o cancelación).
+
+--------------------------------------------------------------------------------
+PAQUETE 5: GESTIÓN DE VENTAS, POS, CAMBIOS Y DEVOLUCIONES
+--------------------------------------------------------------------------------
+CU15: Registrar Venta Presencial en Caja POS (En Línea) [1er Parcial - MODIFICADO]
+- Plataforma: Web / POS
+- Actores: Cajero / Vendedor, Cliente, Backend
+- Modificación: Cobro directo en punto de venta con emisión de comprobante y actualización de stock.
+
+CU16: Registrar Venta de Contado en Modo Offline [2do Parcial - NUEVO]
+- Plataforma: Web PWA / Móvil
+- Actores: Cajero / Vendedor, Base de Datos Local
+- Descripción: Cobro presencial en efectivo sin internet. Genera UUIDv4 único, descuenta stock local
+  preventivo, emite ticket offline y encola la operación en estado PENDIENTE_SYNC.
+
+CU17: Consultar Bandeja de Operaciones Locales Pendientes [2do Parcial - NUEVO]
+- Plataforma: Web PWA / Móvil
+- Actores: Cajero / Vendedor, Encargado de Sucursal, Base de Datos Local
+- Descripción: Visualización de las ventas y reservas encoladas localmente con sus estados
+  (Registrada Local, Enviada, Confirmada, En Conflicto) que sobreviven al reinicio de la app.
+
+CU18: Sincronizar Operaciones Comerciales Locales con Idempotencia [2do Parcial - NUEVO]
+- Plataforma: Web PWA / Móvil / Backend
+- Actores: Cajero / Vendedor, Service Worker / Sync Manager, Backend
+- Descripción: Transmisión en lote de ventas y reservas al recuperar internet. El backend valida el
+  UUIDv4 en sync_audit_logs; reintentos de red no duplican ventas ni movimientos de stock.
+
+CU19: Gestionar Cambios de Prendas con Diferencia de Precio [2do Parcial - EXTRA / APORTE]
+- Plataforma: Web / POS
+- Actores: Cliente, Cajero / Vendedor, Encargado de Sucursal, Backend
+- Política de Negocio: Cambio de talla/modelo donde el precio varía (ej. M a Bs 50 por L a Bs 70).
+  El cambio SOLO se consolida si el cliente abona la diferencia de precio (Bs 20). Si no abona,
+  se rechaza el cambio y se devuelve la prenda original o se aplica devolución.
+
+CU20: Gestionar Devoluciones de Prendas y Reembolso (50% - 80%) [2do Parcial - NUEVO]
+- Plataforma: Web / POS
+- Actores: Cliente, Cajero / Vendedor, Encargado de Sucursal, Backend
+- Política de Negocio: Retención del 20% al 50% por costos operativos y reembolso efectivo del
+  50% al 80% del valor pagado originalmente en nota de crédito o efectivo. Reintegra stock a tienda.
+
+--------------------------------------------------------------------------------
+PAQUETE 6: GEOLOCALIZACIÓN Y EXPERIENCIA VIRTUAL
+--------------------------------------------------------------------------------
+CU21: Visualizar Ubicación de Sucursales con OpenStreetMap [2do Parcial - EXTRA / MAPAS]
+- Plataforma: Móvil (Flutter)
+- Actores: Cliente, Servicio OpenStreetMap, Servicio OpenRouteService
+- Descripción: Mapa interactivo en Flutter que ubica las sucursales físicas de la empresa,
+  calcula distancias y muestra rutas de llegada sin depender de servicios pagos.
+
+CU22: Usar Vestidor Virtual mediante Realidad Aumentada [1er Parcial - PRESERVADO]
+- Plataforma: Móvil (Flutter)
+- Actores: Cliente, Módulo AR
+- Descripción: Visualización de prendas del catálogo sobre la imagen de la cámara del cliente.
+
+--------------------------------------------------------------------------------
+PAQUETE 7: INTELIGENCIA ARTIFICIAL GENERATIVA, MACHINE LEARNING Y ANALÍTICA
+--------------------------------------------------------------------------------
+CU23: Solicitar Reportes Generativos en Lenguaje Natural (Texto y Voz) [2do Parcial - NUEVO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Superadmin Plataforma, Backend, Servicio LLM
+- Descripción: El usuario solicita por teclado o micrófono (Web Speech API) reportes (ej. "Ventas de
+  septiembre por sucursal"). Backend valida parámetros e inyecta 'WHERE tenant_id' seguro.
+
+CU24: Presentar y Exportar Reportes Dinámicos (PDF / Excel) [2do Parcial - NUEVO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Superadmin Plataforma, Backend
+- Descripción: Renderizado dinámico de tablas y gráficos automáticos (barras, líneas, pastel)
+  con controles de exportación formal a documentos PDF y hojas de cálculo Excel.
+
+CU25: Gestionar Preparación de Datos Sintéticos para Machine Learning [2do Parcial - NUEVO]
+- Plataforma: Web / Backend
+- Actores: Administrador Tenant, Superadmin Plataforma, Módulo ML
+- Descripción: Síntesis y preprocesamiento de dataset con variaciones estacionales para
+  entrenamiento riguroso de modelos predictivos y de segmentación de clientes.
+
+CU26: Entrenar y Evaluar Modelo Predictivo de Demanda (Supervisado) [2do Parcial - NUEVO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Backend, Módulo ML
+- Descripción: Entrenamiento de modelo de regresión/demanda para pronosticar ventas semanales
+  por sucursal y categoría, apoyando la planificación de compras.
+
+CU27: Analizar Segmentos de Clientes y Anomalías (No Supervisado) [2do Parcial - NUEVO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Backend, Módulo ML
+- Descripción: Algoritmo K-Means que descubre grupos de clientes por hábitos de compra y detecta
+  desviaciones anómalas de inventario.
+
+CU28: Consultar Cuadro de Mando y Dashboard Analítico Ejecutivo [1er Parcial - MODIFICADO]
+- Plataforma: Web
+- Actores: Administrador Tenant, Superadmin Plataforma, Backend
+- Modificación: Tablero gerencial interactivo con KPIs de ventas, cumplimiento de stock,
+  proyecciones de los modelos de Machine Learning y estado operativo de las tiendas.
+
+================================================================================
+4. MATRIZ RESUMEN: LOS 28 CASOS DE USO VS ORIGEN DE PARCIAL
+================================================================================
+
+CU     Nombre del Caso de Uso                                  Origen Parcial           Paquete Arquitectónico
+---------------------------------------------------------------------------------------------------------------------------------
+CU01   Gestionar Empresas Contratantes (Tenants)               2do Parcial [NUEVO]      P1: Usuarios y Multitenancy
+CU02   Gestionar Planes de Suscripción y Límites               2do Parcial [NUEVO]      P1: Usuarios y Multitenancy
+CU03   Autenticar Usuario en Contexto Multitenant              1er Parcial (Modificado) P1: Usuarios y Multitenancy
+CU04   Gestionar Sucursales bajo Reglas de Suscripción         1er Parcial (Modificado) P1: Usuarios y Multitenancy
+CU05   Consultar y Actualizar Perfil de Usuario                1er Parcial (Modificado) P1: Usuarios y Multitenancy
+CU06   Gestionar Catálogo de Productos y Variantes             1er Parcial (Modificado) P2: Catálogo y Productos
+CU07   Consultar y Filtrar Catálogo en Línea                   1er Parcial (Modificado) P2: Catálogo y Productos
+CU08   Descargar Catálogo a Caché Local (IndexedDB/SQLite)     2do Parcial [NUEVO]      P3: Inventario Multisucursal
+CU09   Consultar Catálogo Local en Modo Offline                2do Parcial [NUEVO]      P3: Inventario Multisucursal
+CU10   Consultar Disponibilidad de Prendas por Sucursal        1er Parcial (Modificado) P3: Inventario Multisucursal
+CU11   Registrar Movimiento de Inventario y Traspasos          1er Parcial (Modificado) P3: Inventario Multisucursal
+CU12   Gestionar Carrito y Compra Digital con Stripe           1er Parcial (Modificado) P4: Compras y Reservas
+CU13   Registrar Reserva de Prendas (Online y Offline)         2do Parcial [NUEVO]      P4: Compras y Reservas
+CU14   Atender Reserva y Resolver Conflictos de Stock          1er Parcial (Modificado) P4: Compras y Reservas
+CU15   Registrar Venta Presencial en Caja POS (Online)         1er Parcial (Modificado) P5: Ventas, POS y Devoluciones
+CU16   Registrar Venta de Contado en Modo Offline              2do Parcial [NUEVO]      P5: Ventas, POS y Devoluciones
+CU17   Consultar Bandeja de Operaciones Locales Pendientes     2do Parcial [NUEVO]      P5: Ventas, POS y Devoluciones
+CU18   Sincronizar Operaciones Locales con Idempotencia        2do Parcial [NUEVO]      P5: Ventas, POS y Devoluciones
+CU19   Gestionar Cambios de Prendas con Diferencia de Precio   2do Parcial [EXTRA]      P5: Ventas, POS y Devoluciones
+CU20   Gestionar Devoluciones de Prendas y Reembolso (50-80%)  2do Parcial [NUEVO]      P5: Ventas, POS y Devoluciones
+CU21   Visualizar Sucursales con OpenStreetMap en Móvil        2do Parcial [EXTRA]      P6: Mapas y AR
+CU22   Usar Vestidor Virtual en Realidad Aumentada             1er Parcial (Preservado) P6: Mapas y AR
+CU23   Solicitar Reportes Generativos (Texto y Voz)            2do Parcial [NUEVO]      P7: IA, Machine Learning y Dashboard
+CU24   Presentar y Exportar Reportes Dinámicos (PDF/Excel)     2do Parcial [NUEVO]      P7: IA, Machine Learning y Dashboard
+CU25   Gestionar Preparación de Datos Sintéticos para ML       2do Parcial [NUEVO]      P7: IA, Machine Learning y Dashboard
+CU26   Entrenar y Evaluar Modelo Predictivo de Ventas          2do Parcial [NUEVO]      P7: IA, Machine Learning y Dashboard
+CU27   Analizar Segmentos de Clientes y Anomalías (K-Means)    2do Parcial [NUEVO]      P7: IA, Machine Learning y Dashboard
+CU28   Consultar Cuadro de Mando y Dashboard Ejecutivo         1er Parcial (Modificado) P7: IA, Machine Learning y Dashboard
+================================================================================
+Totales:
+- Casos de Uso del 1er Parcial (Modificados/Preservados): 12 CUs
+- Casos de Uso Exclusivos del 2do Parcial (Nuevos/Extras):16 CUs
+- TOTAL EXACTO:                                           28 CASOS DE USO
+================================================================================
+
+================================================================================
+5. HOJA DE RUTA RECOMENDADA PARA LAS 3 PRESENTACIONES (INCREMENTAL)
+================================================================================
+
+--------------------------------------------------------------------------------
+PRESENTACIÓN 1: DOMINGO 25/10/2026 (10 Casos de Uso)
+Objetivo: Base de la Plataforma SaaS Multitenant y Catálogo Offline
+--------------------------------------------------------------------------------
+1. CU01: Gestionar Empresas Contratantes (Tenants) [2do Parcial]
+2. CU02: Gestionar Planes de Suscripción y Límites (Básico vs Profesional) [2do Parcial]
+3. CU03: Autenticar Usuario en Contexto Multitenant (JWT con claims)
+4. CU04: Gestionar Sucursales bajo Reglas de Suscripción (máx 2 vs 10 sucursales)
+5. CU05: Consultar y Actualizar Perfil de Usuario
+6. CU06: Gestionar Catálogo de Productos y Variantes por Tenant
+7. CU07: Consultar y Filtrar Catálogo en Línea
+8. CU08: Descargar y Almacenar Catálogo en Caché Local (IndexedDB/SQLite) [2do Parcial]
+9. CU09: Consultar Catálogo y Disponibilidad Local en Modo Offline [2do Parcial]
+10. CU10: Consultar Disponibilidad de Prendas por Sucursal
+
+Demostración técnica en la Presentación 1:
+Dos empresas independientes ("Boutique Elegance" y "Moda Urbana") operando en la
+misma base de datos PostgreSQL sin cruce de información, validación en backend de
+límite de sucursales según el plan, y visualización del catálogo en la PWA (IndexedDB)
+y móvil (SQLite) en modo desconectado.
+
+--------------------------------------------------------------------------------
+PRESENTACIÓN 2: DOMINGO 01/11/2026 (+11 Casos de Uso = 21 CUs Acumulados)
+Objetivo: Operaciones Offline, Motor de Sincronización, Stripe, Cambios y Devoluciones
+--------------------------------------------------------------------------------
+11. CU11: Registrar Movimiento de Inventario y Traspasos
+12. CU12: Gestionar Carrito y Compra Digital con Pasarela Stripe (despacho condicionado a pago)
+13. CU13: Registrar Reserva de Prendas (Online y Offline) [2do Parcial]
+14. CU14: Atender Reserva y Resolver Conflictos de Stock
+15. CU15: Registrar Venta Presencial en Caja POS (Online)
+16. CU16: Registrar Venta de Contado en Modo Offline [2do Parcial]
+17. CU17: Consultar Bandeja de Operaciones Locales Pendientes [2do Parcial]
+18. CU18: Sincronizar Operaciones Comerciales Locales con Idempotencia [2do Parcial]
+19. CU19: Gestionar Cambios de Prendas con Diferencia de Precio [Aporte Extra]
+20. CU20: Gestionar Devoluciones de Prendas y Reembolso (50% - 80%) [2do Parcial]
+21. CU21: Visualizar Ubicación de Sucursales con OpenStreetMap [Aporte Extra Mapas]
+
+Demostración técnica en la Presentación 2:
+Desconexión física de red en terminal POS y móvil, cobro de contado offline y registro de
+cambio de prenda abonando la diferencia de precio por talla (M a Bs 50 por L a Bs 70),
+reconexión de red, sincronización automática con verificación de idempotencia por UUID,
+tramitación de devolución con retención del 20-50% y mapa en Flutter con OpenStreetMap.
+
+--------------------------------------------------------------------------------
+PRESENTACIÓN 3: DOMINGO 08/11/2026 (+7 Casos de Uso = 28 CUs TOTALES)
+Objetivo: IA Generativa (Texto/Voz), Machine Learning, Realidad Aumentada y Dashboard
+--------------------------------------------------------------------------------
+22. CU22: Usar Vestidor Virtual mediante Realidad Aumentada [1er Parcial]
+23. CU23: Solicitar Reportes Generativos en Lenguaje Natural (Texto y Voz) [2do Parcial]
+24. CU24: Presentar y Exportar Reportes Dinámicos (PDF / Excel) [2do Parcial]
+25. CU25: Gestionar Preparación de Datos Sintéticos para Machine Learning [2do Parcial]
+26. CU26: Entrenar y Evaluar Modelo Predictivo de Demanda (Supervisado) [2do Parcial]
+27. CU27: Analizar Segmentos de Clientes y Anomalías (K-Means) [2do Parcial]
+28. CU28: Consultar Cuadro de Mando y Dashboard Analítico Ejecutivo
+
+Demostración técnica en la Presentación 3:
+Generación de al menos 4 tipos de reportes dictados por voz con datos reales del tenant
+activo, exportación en PDF y Excel, gráficos de demanda futura entrenados con datos
+sintéticos en Scikit-Learn, clusterización de clientes y cuadro de mando consolidado.
+
+--------------------------------------------------------------------------------
+DEFENSA FINAL: MARTES 10 DE NOVIEMBRE DE 2026 (07:00 AM)
+Sistema completo de 28 Casos de Uso con trazabilidad ICONIX, código en producción y
+documentación final aprobada.
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
