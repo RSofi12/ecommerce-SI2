@@ -13,8 +13,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://ecommerce-si2.onrender.com/api/$1",
-      "headers": { "Cache-Control": "no-cache" }
+      "destination": "https://ecommerce-si2.onrender.com/api/$1"
     },
     {
       "source": "/health",
