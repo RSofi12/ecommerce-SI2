@@ -7,6 +7,7 @@ from sqlalchemy.sql import func
 
 from app.core.database import Base
 from app.packages.p1_gestion_usuarios_acceso.schemas.enums import RolEnum, GenderEnum
+from app.packages.p0_saas_plataforma.models.company import Company  # noqa: F401
 
 
 class User(Base):

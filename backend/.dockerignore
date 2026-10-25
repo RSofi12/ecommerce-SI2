@@ -1,0 +1,20 @@
+# .dockerignore
+# Exclude files not needed in the Docker image
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.env
+.env.example
+Dockerfile
+README.md
+*.md
+*.txt
+*.docx
+*.pdf
+# tests
+/tests/
+# local data files
+/images.csv
+/styles.csv
