@@ -1,10 +1,12 @@
 {
   "version": 2,
   "cleanUrls": true,
+  "rootDirectory": "frontend",
   "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
         "outputDirectory": "dist/frontend"
