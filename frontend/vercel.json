@@ -13,9 +13,7 @@
     {
       "src": "/api/(.*)",
       "dest": "https://ecommerce-si2.onrender.com/api/$1",
-      "headers": {
-        "Cache-Control": "no-cache"
-      }
+      "headers": { "Cache-Control": "no-cache" }
     },
     {
       "src": "/health",
@@ -23,7 +21,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/frontend/$1"
+      "dest": "/index.html"
     }
   ]
 }
