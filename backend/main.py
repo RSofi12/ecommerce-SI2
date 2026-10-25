@@ -55,7 +55,13 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="FashionStore SaaS Multitenant API", lifespan=lifespan)
 
-# CORS
+@app.get("/")
+async def root():
+    return {"message": "Welcome to FashionStore API"}
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

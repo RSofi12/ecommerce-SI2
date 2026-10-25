@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+
+  "installCommand": "npm install --legacy-peer-deps --prefix frontend",
+  "buildCommand": "npm run build --prefix frontend",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "outputDirectory": "dist/frontend"
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://ecommerce-si2.onrender.com/api/$1"
+    },
+    {
+      "source": "/health",
+      "destination": "https://ecommerce-si2.onrender.com/health"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
