@@ -12,6 +12,7 @@ class ProductVariant(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True, index=True)
     sku = Column(String, nullable=False, unique=True, index=True)
     price = Column(Numeric(10, 2), nullable=False)
     size_id = Column(UUID(as_uuid=True), ForeignKey("sizes.id"), nullable=True, index=True)
