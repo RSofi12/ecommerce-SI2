@@ -10,7 +10,7 @@ services:
         # Set this in Render UI (or keep the placeholder)
         value: "postgresql+psycopg2://neondb_owner:npg_4NnHEasV9QzO@ep-little-base-b5ckb41q-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
       - key: SECRET_KEY
-        value: "replace-with-a-local-secret"
+        value: "supersecretkey1234567890"
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "60"
       - key: ALGORITHM
@@ -42,4 +42,7 @@ services:
     autoDeploy: true
     healthCheckPath: /health
     plan: free
-    region: oregon
+    postDeployCommand: |
+        alembic upgrade head
+        python -m seed
+      region: oregon
