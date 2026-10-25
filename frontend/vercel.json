@@ -1,31 +1,26 @@
 {
   "version": 2,
-  "builds": [
+  "cleanUrls": true,
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "outputDirectory": "frontend/dist/frontend"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://ecommerce-si2.onrender.com/api/$1",
+      "source": "/api/(.*)",
+      "destination": "https://ecommerce-si2.onrender.com/api/$1",
       "headers": { "Cache-Control": "no-cache" }
     },
     {
-      "src": "/health",
-      "dest": "https://ecommerce-si2.onrender.com/health"
+      "source": "/health",
+      "destination": "https://ecommerce-si2.onrender.com/health"
     },
     {
-      "src": "/",
-      "dest": "/index.html"
+      "source": "/",
+      "destination": "/index.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ]
+  ],
+  "static": {
+    "directory": "frontend/dist/frontend"
+  }
 }
