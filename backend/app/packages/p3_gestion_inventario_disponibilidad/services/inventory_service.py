@@ -39,7 +39,20 @@ def _get_or_create_inventory(db: Session, variant_id, branch_id) -> Inventory:
     if inventory:
         return inventory
 
-    inventory = Inventory(variant_id=variant_id, branch_id=branch_id, quantity=0, reserved_quantity=0, minimum_stock=0)
+    variant = db.query(ProductVariant).filter(ProductVariant.id == variant_id).first()
+    tenant_id = getattr(variant, "tenant_id", None)
+    if not tenant_id:
+        branch = db.query(Branch).filter(Branch.id == branch_id).first()
+        tenant_id = getattr(branch, "tenant_id", None)
+
+    inventory = Inventory(
+        variant_id=variant_id,
+        branch_id=branch_id,
+        tenant_id=tenant_id,
+        quantity=0,
+        reserved_quantity=0,
+        minimum_stock=0,
+    )
     db.add(inventory)
     db.flush()
     return inventory
@@ -60,8 +73,8 @@ def _serialize_stock_rows(rows):
     return [dict(row) for row in rows]
 
 
-def get_branch_stock(db: Session, branch_id):
-    rows = (
+def get_branch_stock(db: Session, branch_id, tenant_id=None):
+    query = (
         db.query(
             Inventory.variant_id.label("variant_id"),
             Inventory.branch_id.label("branch_id"),
@@ -87,9 +100,11 @@ def get_branch_stock(db: Session, branch_id):
         .outerjoin(Size, Size.id == ProductVariant.size_id)
         .outerjoin(Color, Color.id == ProductVariant.color_id)
         .filter(Inventory.branch_id == branch_id)
-        .order_by(Product.name.asc(), ProductVariant.sku.asc())
-        .all()
     )
+    if tenant_id:
+        query = query.filter(Branch.tenant_id == tenant_id, Product.tenant_id == tenant_id)
+
+    rows = query.order_by(Product.name.asc(), ProductVariant.sku.asc()).all()
 
     result = []
     for row in rows:
@@ -121,8 +136,8 @@ def get_branch_stock(db: Session, branch_id):
     return result
 
 
-def get_consolidated_stock(db: Session):
-    rows = (
+def get_consolidated_stock(db: Session, tenant_id=None):
+    query = (
         db.query(
             Inventory.variant_id.label("variant_id"),
             Product.id.label("product_id"),
@@ -147,9 +162,11 @@ def get_consolidated_stock(db: Session):
         .join(Branch, Branch.id == Inventory.branch_id)
         .outerjoin(Size, Size.id == ProductVariant.size_id)
         .outerjoin(Color, Color.id == ProductVariant.color_id)
-        .order_by(Product.name.asc(), ProductVariant.sku.asc(), Branch.name.asc())
-        .all()
     )
+    if tenant_id:
+        query = query.filter(Branch.tenant_id == tenant_id, Product.tenant_id == tenant_id)
+
+    rows = query.order_by(Product.name.asc(), ProductVariant.sku.asc(), Branch.name.asc()).all()
 
     grouped = {}
     for row in rows:

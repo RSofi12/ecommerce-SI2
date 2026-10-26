@@ -27,6 +27,7 @@ from app.packages.p2_gestion_productos_catalogo.models.product import Product
 from app.packages.p2_gestion_productos_catalogo.models.product_variant import ProductVariant
 from app.models.inventory import Inventory
 from app.packages.p1_gestion_usuarios_acceso.models.provider import Provider
+from app.packages.p1_gestion_usuarios_acceso.models.branch import Branch
 from app.packages.p2_gestion_productos_catalogo.services.catalog_service import (
     create_name_item,
     create_color,
@@ -467,24 +468,149 @@ async def delete_variant_image_route(
 
 
 @router.get("/availability")
-async def get_availability(product_id: UUID | None = None, variant_id: UUID | None = None, branch_id: UUID | None = None, db: Session = Depends(get_db)):
-    if branch_id is None:
-        raise HTTPException(status_code=422, detail="branch_id es requerido")
+async def get_availability(
+    product_id: UUID | None = None,
+    variant_id: UUID | None = None,
+    branch_id: UUID | None = None,
+    tenant_id: UUID | None = None,
+    db: Session = Depends(get_db),
+):
+    if not product_id and not variant_id:
+        raise HTTPException(status_code=422, detail="Debes enviar product_id o variant_id")
 
+    # Si se envía branch_id específico, mantenemos el contrato unitario histórico
+    if branch_id is not None:
+        if variant_id:
+            quantity = get_branch_quantity(db, variant_id, branch_id)
+            return response(
+                status_code=200,
+                message="Disponibilidad obtenida exitosamente",
+                data={"variant_id": variant_id, "branch_id": branch_id, "quantity": quantity},
+            )
+        if product_id:
+            product = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
+            if not product:
+                raise HTTPException(status_code=404, detail=f"Producto con id {product_id} no encontrado")
+            variant_ids = [variant.id for variant in product.variants if variant.status == ProductStatusEnum.active]
+            inventories = db.query(Inventory).filter(Inventory.variant_id.in_(variant_ids), Inventory.branch_id == branch_id).all()
+            quantity = sum(available_quantity(inventory.quantity, inventory.reserved_quantity) for inventory in inventories)
+            return response(
+                status_code=200,
+                message="Disponibilidad obtenida exitosamente",
+                data={"product_id": product_id, "branch_id": branch_id, "quantity": quantity},
+            )
+
+    # CU10: branch_id is None -> Consulta de disponibilidad multisede por sucursales activas
     if variant_id:
-        quantity = get_branch_quantity(db, variant_id, branch_id)
-        return response(status_code=200, message="Disponibilidad obtenida exitosamente", data={"variant_id": variant_id, "branch_id": branch_id, "quantity": quantity})
+        variant = db.query(ProductVariant).filter(ProductVariant.id == variant_id).first()
+        if not variant:
+            raise HTTPException(status_code=404, detail=f"Variante con id {variant_id} no encontrada")
+        product = db.query(Product).filter(Product.id == variant.product_id).first()
+        target_tenant = tenant_id or getattr(variant, "tenant_id", None) or (product.tenant_id if product else None)
+
+        branch_query = db.query(Branch).filter(Branch.is_active.is_(True))
+        if target_tenant:
+            branch_query = branch_query.filter(Branch.tenant_id == target_tenant)
+        branches = branch_query.order_by(Branch.name.asc()).all()
+
+        inventories = (
+            db.query(Inventory)
+            .filter(
+                Inventory.variant_id == variant_id,
+                Inventory.branch_id.in_([b.id for b in branches]),
+            )
+            .all()
+            if branches
+            else []
+        )
+        inv_map = {inv.branch_id: inv for inv in inventories}
+
+        branch_list = []
+        total_available = 0
+        for b in branches:
+            inv = inv_map.get(b.id)
+            qty = inv.quantity if inv else 0
+            res = inv.reserved_quantity if inv else 0
+            avail = max(qty - res, 0)
+            total_available += avail
+            branch_list.append({
+                "branch_id": b.id,
+                "branch_name": b.name,
+                "city": b.city,
+                "address": b.address,
+                "phone": b.phone,
+                "opening_hours": b.opening_hours,
+                "quantity": qty,
+                "reserved_quantity": res,
+                "available_quantity": avail,
+            })
+
+        return response(
+            status_code=200,
+            message="Disponibilidad en sucursales obtenida exitosamente",
+            data={
+                "variant_id": variant_id,
+                "product_id": variant.product_id,
+                "product_name": product.name if product else None,
+                "sku": variant.sku,
+                "total_available": total_available,
+                "branches": branch_list,
+            },
+        )
 
     if product_id:
         product = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
         if not product:
             raise HTTPException(status_code=404, detail=f"Producto con id {product_id} no encontrado")
-        variant_ids = [variant.id for variant in product.variants if variant.status == ProductStatusEnum.active]
-        inventories = db.query(Inventory).filter(Inventory.variant_id.in_(variant_ids), Inventory.branch_id == branch_id).all()
-        quantity = sum(available_quantity(inventory.quantity, inventory.reserved_quantity) for inventory in inventories)
-        return response(status_code=200, message="Disponibilidad obtenida exitosamente", data={"product_id": product_id, "branch_id": branch_id, "quantity": quantity})
+        target_tenant = tenant_id or product.tenant_id
+        active_variant_ids = [v.id for v in product.variants if v.status == ProductStatusEnum.active]
 
-    raise HTTPException(status_code=422, detail="Debes enviar product_id o variant_id")
+        branch_query = db.query(Branch).filter(Branch.is_active.is_(True))
+        if target_tenant:
+            branch_query = branch_query.filter(Branch.tenant_id == target_tenant)
+        branches = branch_query.order_by(Branch.name.asc()).all()
+
+        inventories = (
+            db.query(Inventory)
+            .filter(
+                Inventory.variant_id.in_(active_variant_ids),
+                Inventory.branch_id.in_([b.id for b in branches]),
+            )
+            .all()
+            if branches and active_variant_ids
+            else []
+        )
+
+        branch_list = []
+        total_available = 0
+        for b in branches:
+            b_invs = [inv for inv in inventories if inv.branch_id == b.id]
+            qty = sum(inv.quantity for inv in b_invs)
+            res = sum(inv.reserved_quantity for inv in b_invs)
+            avail = sum(max(inv.quantity - inv.reserved_quantity, 0) for inv in b_invs)
+            total_available += avail
+            branch_list.append({
+                "branch_id": b.id,
+                "branch_name": b.name,
+                "city": b.city,
+                "address": b.address,
+                "phone": b.phone,
+                "opening_hours": b.opening_hours,
+                "quantity": qty,
+                "reserved_quantity": res,
+                "available_quantity": avail,
+            })
+
+        return response(
+            status_code=200,
+            message="Disponibilidad en sucursales obtenida exitosamente",
+            data={
+                "product_id": product_id,
+                "product_name": product.name,
+                "total_available": total_available,
+                "branches": branch_list,
+            },
+        )
 
 
 @router.put("/inventory")

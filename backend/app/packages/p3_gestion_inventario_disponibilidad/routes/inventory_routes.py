@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.auth.dependencies import require_roles
 from app.core.database import get_db
 from app.packages.p1_gestion_usuarios_acceso.models.user import User
+from app.packages.p1_gestion_usuarios_acceso.models.branch import Branch
 from app.schemas.enums import RolEnum
 from app.packages.p3_gestion_inventario_disponibilidad.schemas.inventory_schema import (
     InventoryMovementCreate,
@@ -58,7 +59,9 @@ async def consolidated_stock_route(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_roles(RolEnum.administrador)),
 ):
-    stock = get_consolidated_stock(db)
+    tenant_id = current_user.get("tenant_id")
+    tenant_uuid = UUID(str(tenant_id)) if tenant_id else None
+    stock = get_consolidated_stock(db, tenant_id=tenant_uuid)
     return response(status_code=200, message="Inventario consolidado obtenido exitosamente", data=stock)
 
 
@@ -68,8 +71,14 @@ async def branch_stock_route(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_roles(RolEnum.administrador, RolEnum.encargado, RolEnum.cajero)),
 ):
+    tenant_id = current_user.get("tenant_id")
+    tenant_uuid = UUID(str(tenant_id)) if tenant_id else None
+    if tenant_uuid:
+        branch = db.query(Branch).filter(Branch.id == branch_id).first()
+        if not branch or (branch.tenant_id and branch.tenant_id != tenant_uuid):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sucursal no encontrada")
     _require_branch_access(current_user, branch_id)
-    stock = get_branch_stock(db, branch_id)
+    stock = get_branch_stock(db, branch_id, tenant_id=tenant_uuid)
     return response(status_code=200, message="Inventario por sucursal obtenido exitosamente", data=stock)
 
 

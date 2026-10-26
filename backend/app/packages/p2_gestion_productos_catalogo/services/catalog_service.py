@@ -547,7 +547,12 @@ def create_or_update_inventory(db: Session, variant_id, branch_id, quantity: int
     if inv:
         inv.quantity = quantity
     else:
-        inv = Inventory(variant_id=variant_id, branch_id=branch_id, quantity=quantity)
+        variant = db.query(ProductVariant).filter(ProductVariant.id == variant_id).first()
+        tenant_id = getattr(variant, "tenant_id", None)
+        if not tenant_id:
+            branch = db.query(Branch).filter(Branch.id == branch_id).first()
+            tenant_id = getattr(branch, "tenant_id", None)
+        inv = Inventory(variant_id=variant_id, branch_id=branch_id, tenant_id=tenant_id, quantity=quantity)
         db.add(inv)
     db.commit()
     db.refresh(inv)
