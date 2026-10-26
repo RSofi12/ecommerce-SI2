@@ -5,7 +5,7 @@ base64_value() {
   printf '%s' "$1" | base64 | tr -d '\n'
 }
 
-api_base_url="${API_BASE_URL:-http://localhost:8000/api}"
+api_base_url="${API_BASE_URL:-https://ecommerce-si2.onrender.com/api}"
 decart_public_key="${DECART_PUBLIC_KEY:-}"
 stripe_publishable_key="${STRIPE_PUBLISHABLE_KEY:-}"
 

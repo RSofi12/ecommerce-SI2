@@ -7,7 +7,6 @@ services:
     dockerfilePath: ./backend/Dockerfile
     envVars:
       - key: DATABASE_URL
-        # Set this in Render UI (or keep the placeholder)
         value: "postgresql+psycopg2://neondb_owner:npg_4NnHEasV9QzO@ep-little-base-b5ckb41q-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
       - key: SECRET_KEY
         value: "supersecretkey1234567890"
@@ -42,7 +41,24 @@ services:
     autoDeploy: true
     healthCheckPath: /health
     plan: free
+    region: oregon
     postDeployCommand: |
-        alembic upgrade head
-        python -m seed
-      region: oregon
+      alembic upgrade head
+      python -m seed
+
+  - type: static
+    name: fashionstore-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist/frontend/browser
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22.13.1"
+      - key: API_BASE_URL
+        value: "https://ecommerce-si2.onrender.com/api"
+      - key: RENDER
+        value: "true"
