@@ -311,24 +311,29 @@ flowchart TB
   2. El Controlador en cliente consulta la última fecha de sincronización y solicita al endpoint `/api/catalog/offline-pack` los datos actualizados.
   3. El Controlador backend extrae productos, variantes, tallas, precios y niveles de stock de la sucursal seleccionada.
   4. El cliente recibe el payload y el Controlador local escribe los registros en:
-     - **Web PWA:** Almacén de objetos `products` y `variants` en **IndexedDB**.
+     - **Web PWA:** Almacén de objetos `catalog_products` y `catalog_meta` en **IndexedDB**.
      - **Móvil:** Tablas locales `local_products` y `local_variants` en **SQLite**.
-  5. La Frontera informa: "Catálogo local sincronizado para uso sin conexión".
-- **Flujos Alternativos:**
-  - *A1: Error de red o descarga parcial:* El Controlador local cancela la transacción de base de datos local y mantiene la última versión íntegra en caché.
-- **Postcondición:** Base de datos local preparada para consultas y ventas en modo desconectado.
+  5. La Frontera informa: "Catálogo local sincronizado para uso sin conexión" y actualiza la insignia visual con el conteo de prendas en caché.
+- **Flujos Alternativos (originados en Controlador):**
+  - *2. A1: Pérdida intempestiva de conexión o falla de red durante la descarga:* Si la petición HTTP falla o expira por timeout, el Controlador local aborta la transacción sin corromper el almacenamiento previo, mantiene intacta la última copia íntegra en IndexedDB/SQLite y la Frontera advierte al usuario de la imposibilidad de refrescar en ese instante.
+  - *4. A2: Cuota de almacenamiento o restricción de persistencia del navegador:* Si el almacén local excede la cuota permitida o el almacenamiento en disco se encuentra restringido, el Controlador captura la excepción de IndexedDB, purga cachés obsoletos y, de persistir, degrada temporalmente la aplicación a almacenamiento en memoria notificando a la Frontera.
+- **Postcondición:** Base de datos local preparada para consultas y ventas en modo desconectado con integridad garantizada.
 
 #### CU09: Consultar Catálogo Offline en Modo Desconectado
 - **Actores:** Cliente, Cajero (Principales).
 - **Tipo:** Nuevo del 2do Parcial.
 - **Plataforma:** Web PWA / Móvil Flutter.
-- **Precondición:** El dispositivo carece de conexión a Internet (modo avión o falla de red local) y posee datos en base local (CU08).
+- **Precondición:** El dispositivo carece de conexión a Internet (modo avión, falla de red o simulación activa) y posee datos descargados previamente en base local (CU08).
 - **Flujo Normal:**
-  1. El usuario navega por la interfaz de catálogo o pantalla de venta POS.
-  2. El Service Worker (en PWA) o el Repositorio de Datos (en Flutter) intercepta la petición al detectar ausencia de red.
-  3. El Controlador local lee las prendas y variantes desde **IndexedDB** o **SQLite**.
-  4. La Frontera renderiza el catálogo con una insignia visual: *“Modo Sin Conexión - Precios y Stock en Caché”*.
-- **Postcondición:** El usuario examina y selecciona prendas sin interrupción operativa.
+  1. El usuario navega por la interfaz de catálogo o pantalla de venta POS e introduce criterios de búsqueda (texto, categoría, tallas, rango de precio).
+  2. El detector de conectividad en cliente o el Service Worker intercepta la solicitud al identificar ausencia de red o estado simulado offline.
+  3. El Controlador local lee las prendas y variantes directamente desde **IndexedDB** (`catalog_products`) o **SQLite**.
+  4. El Controlador local ejecuta el motor de búsqueda y filtrado en memoria sobre los registros deserializados.
+  5. La Frontera renderiza la grilla de productos acompañada de una insignia visual prominente: *“Modo Sin Conexión - Catálogo y Precios en Caché Local”*, señalando la fecha/hora de la última sincronización y el total de ítems disponibles.
+- **Flujos Alternativos (originados en Controlador):**
+  - *3. A1: Base local vacía sin descargas previas:* Si el usuario ingresa en modo desconectado pero nunca ejecutó una descarga previa (CU08), el Controlador local detecta almacén vacío y la Frontera despliega un estado deliberado de aviso orientando al usuario a conectarse al menos una vez para habilitar el uso offline.
+  - *4. A2: Búsqueda sin coincidencias en catálogo local:* Si los filtros aplicados no coinciden con ninguna prenda guardada en caché, el Controlador retorna lista vacía y la Frontera ofrece un botón de acción rápida para limpiar filtros sin necesidad de recargar la página.
+- **Postcondición:** El usuario examina y selecciona prendas sin interrupción operativa aun en aislamiento total de conectividad.
 
 #### CU10: Consultar Disponibilidad de Stock por Sucursal
 - **Actores:** Cliente, Cajero, Encargado de Sucursal (Principales), Backend API (Secundario).

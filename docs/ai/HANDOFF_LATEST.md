@@ -27,6 +27,12 @@
    - **Limpieza de Repositorio:** Carpeta `scratch/` removida de la raíz del repositorio.
    - **Pruebas de Disponibilidad:** Suite dedicada [`test_cu10_stock_availability.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu10_stock_availability.py) con **4/4 tests PASSED** y **18/18 pruebas de regresión PASSED**.
 
+7. **CU08 & CU09 – Catálogo Offline en IndexedDB y Detección de Red (CONSOLIDADO):**
+   - **IndexedDB Nativo en Frontend:** Implementación de [`idb-catalog.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/idb-catalog.service.ts) (`fashionstore_local_db` con almacenes `catalog_products` y `catalog_meta`), métodos `saveOfflinePack()`, `getOfflineProducts()`, `getSyncMeta()` y `clearCache()`.
+   - **Detección Reactiva de Red & Simulación:** [`network-status.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/network-status.service.ts) con listeners reactivos `online`/`offline` y toggle de contingencia `simulatedOffline`.
+   - **Frontend UI/UX en Catálogo Público (CU07/CU08/CU09):** En [`catalog-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/catalog-page.component.ts), fallback automático a IndexedDB con búsqueda/filtrado en memoria ante cortes de red o llamadas fallidas, banner ámbar/pizarra con fecha de sincronización, botón de descarga manual de catálogo local con badge dinámico de conteo, botón de toggle para simulación offline y estados deliberados de vacío (`frontend-design`).
+   - **Pulido de UI en Catálogo Admin (CU06):** En [`admin-catalog-page.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-catalog-page.component.html), diseño fluido de matriz de variantes con numeración `#1`, `#2`, textos de ayuda para precios por talla y acciones refinadas.
+
 ---
 
 ### 2. Credenciales Oficiales de Prueba (Sembradas en BD Central)
@@ -38,17 +44,18 @@
 
 ### 3. Estado de Servicios y Pruebas
 * **Backend Tests:** **22/22 pruebas unitarias e integración aprobadas al 100%:**
+  - `tests/test_cu06_cu10_catalog_offline.py`: 4/4 PASSED (Filtro catálogo, descarga offline-pack, sync idempotente con UUID, validación 422).
   - `tests/test_cu10_stock_availability.py`: 4/4 PASSED (Consulta multisede, compatibilidad unitaria, aislamiento de stock por tenant, validación 422).
   - `tests/test_cu06_cu07_multitenant_catalog.py`: 4/4 PASSED (Creación de variantes diferenciadas por talla, aislamiento administrativo, protección contra edición/borrado cruzado, búsqueda facetada por tenant).
   - `tests/test_business_rules.py`: 10/10 PASSED (Disponibilidad de inventario, stock no negativo, transiciones y descuentos).
-  - `tests/test_cu06_cu10_catalog_offline.py`: 4/4 PASSED.
-* **Frontend Web:** Compilación de producción validada exitosamente con `ng build` (0 errores).
+* **Frontend Web:** Tipado estricto e integración IndexedDB completos.
 * **Base de Datos:** Migración `0041` efectivamente aplicada en PostgreSQL (`alembic current` reporta `0041`).
 
 ---
 
 ### 4. Próxima Tarea Inmediata
-1. **Frontend PWA & Mobile (CU08 & CU09):**
-   - Integración de IndexedDB en Angular (Service Worker) y SQLite en Flutter consumiendo `/api/catalog/offline-pack` para navegación en modo desconectado.
-2. **Presentación 2 (CU11 & CU12):**
-   - CU11 (Traslados de Mercadería entre Sucursales) y CU12 (Pasarela Stripe con despacho condicionado al pago confirmado).
+1. **Presentación 2 (CU11 & CU12):**
+   - CU11 (Registrar y Autorizar Traslados de Mercadería entre Sucursales con estados `EN_TRANSITO` y `COMPLETADO`).
+   - CU12 (Comprar Prendas con Pasarela Stripe y Despacho Condicionado al estado `paid` del webhook oficial).
+2. **Aplicación Móvil (Flutter / Dart):**
+   - SQLite local (`sqflite`) consumiendo `/api/catalog/offline-pack` y mapa con OpenStreetMap en CU21.

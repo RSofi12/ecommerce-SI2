@@ -1,24 +1,24 @@
-﻿/* =================================================================================
- * PROYECTO: FashionStore - E-Commerce
+/* =================================================================================
+ * PROYECTO: FashionStore - Plataforma E-Commerce SaaS Multitenant
  * DIAGRAMA: Diagrama de Despliegue (Deployment Diagram - Flujo Vertical UML 2.5+)
  * DESCRIPCIÓN: Modelo de despliegue físico y lógico estructurado verticalmente:
- *              - Capa 1 (Superior): Dispositivos Cliente y Dispositivo Admin/Sucursal.
- *              - Capa 2: Red Internet (WAN / Telecomunicaciones).
- *              - Capa 3: Servidor Web Frontend (Vercel Cloud Platform).
- *              - Capa 4: Servidor Backend (Google Cloud Platform - Cloud Run).
- *              - Capa 5 (Inferior): Servidor Base de Datos (Cloud PostgreSQL - Neon.Tech).
- *              - Capa Lateral Derecha: Servicios Cloud/IA (Lucy VTON, Cloudinary, Gemini AI, Stripe).
+ *              - Capa 1 (Superior): Dispositivos Cliente y Terminales Sucursal / POS Tenant.
+ *              - Capa 2: Red Internet (WAN / Telecomunicaciones con TLS 1.3).
+ *              - Capa 3: Servidor Web Frontend (Render Cloud Platform - Angular 21 PWA).
+ *              - Capa 4: Servidor Backend SaaS (Render Cloud Platform - Docker / FastAPI).
+ *              - Capa 5 (Inferior): Servidor Base de Datos (Cloud PostgreSQL 15+ - Render / Neon).
+ *              - Capa Lateral Derecha: Servicios Cloud, IA y Pasarelas (Lucy VTON, Cloudinary, Gemini AI, Stripe).
  *              
  *              * Todos los artefactos y entornos de ejecución se generan como
  *                elementos UML independientes (Artifacts / Execution Environments)
  *                anidados visual y jerárquicamente dentro de sus Nodos.
  *
  * ENTORNO: Enterprise Architect 15.0+ / 16.0+
- * LENGUAJE: JScript (Motor nativo WSH en Enterprise Architect)
+ * LENGUAJE: JScript (Motor nativo WSH / JScript en Enterprise Architect)
  * ================================================================================= */
 
 var DEFAULT_PACKAGE_NAME = "CUdiagrams";
-var DIAGRAM_NAME = "Diagrama de Despliegue - FashionStore";
+var DIAGRAM_NAME = "Diagrama de Despliegue - FashionStore SaaS";
 
 function log(msg) {
     Session.Output("[Despliegue-FashionStore] " + msg);
@@ -137,20 +137,19 @@ function addExecutionEnv(parentNode, diagram, name, stereotype, l, r, t, b) {
 }
 
 /**
- * Crea una vía de comunicación (CommunicationPath) con etiqueta de protocolo y estereotipo.
+ * Crea una vía de comunicación (CommunicationPath) con etiqueta de protocolo.
+ * NOTA: Se omite el estereotipo en las flechas para evitar la sobrecarga visual de «communication»,
+ * manteniendo de forma limpia el nombre del protocolo y puerto.
  */
-function addCommunication(src, dst, protocolLabel, stereotype) {
+function addCommunication(src, dst, protocolLabel) {
     var con = src.Connectors.AddNew(protocolLabel, "CommunicationPath");
     con.SupplierID = dst.ElementID;
-    if (stereotype && stereotype.length > 0) {
-        con.Stereotype = stereotype;
-    }
     con.Update();
     return con;
 }
 
 function main() {
-    log("Iniciando generación del Diagrama de Despliegue (Flujo Vertical)...");
+    log("Iniciando generación del Diagrama de Despliegue (FashionStore SaaS Multitenant)...");
 
     var pkg = getTargetPackage();
     if (pkg == null) return;
@@ -158,98 +157,98 @@ function main() {
     var diagram = recreateDiagram(pkg);
 
     /* =========================================================================
-     * 1. NIVEL 1: CAPA DE DISPOSITIVOS CLIENTES (Superior: Y = -40 .. -250)
+     * 1. NIVEL 1: CAPA DE DISPOSITIVOS CLIENTES Y SUCURSALES (Y = -40 .. -250)
      * ========================================================================= */
-    // Dispositivo Cliente
+    // Dispositivo Cliente Final (E-Commerce B2C / Probador AR)
     var nodoCliente = addNode(
         pkg, diagram,
         "Dispositivo Cliente\n(PC / Laptop / Smartphone)",
         "device",
-        "Dispositivo del cliente final para acceso a catálogo, compras y probador virtual.",
+        "Dispositivo del cliente final para acceso al catálogo multitenant, carrito de compra, pagos online y probador virtual AR.",
         60, 420, -40, -250
     );
-    addArtifact(nodoCliente, diagram, "Web Client App\n(Angular SPA)", "artifact", 90, 390, -100, -160);
-    addArtifact(nodoCliente, diagram, "Mobile Client App\n(Flutter / Dart)", "artifact", 90, 390, -175, -235);
+    addArtifact(nodoCliente, diagram, "Web Client App\n(Angular 21 PWA)", "artifact", 90, 390, -100, -160);
+    addArtifact(nodoCliente, diagram, "Mobile Client App\n(Flutter / Dart + SQLite)", "artifact", 90, 390, -175, -235);
 
-    // Dispositivo Admin / Sucursal
+    // Dispositivo Sucursal / Punto de Venta (POS) / Admin
     var nodoAdmin = addNode(
         pkg, diagram,
         "Dispositivo Sucursal / Admin\n(PC Escritorio / Terminal POS)",
         "device",
-        "Terminal de trabajo de administradores, encargados y cajeros.",
-        480, 820, -40, -250
+        "Terminal de trabajo en sucursal para administradores, encargados y cajeros (POS Online/Offline con sincronización).",
+        480, 840, -40, -250
     );
-    addArtifact(nodoAdmin, diagram, "Admin Dashboard SPA\n(Angular Web App)", "artifact", 510, 790, -125, -210);
+    addArtifact(nodoAdmin, diagram, "Admin & POS Dashboard\n(Angular 21 PWA + IndexedDB)", "artifact", 510, 810, -125, -210);
 
     /* =========================================================================
-     * 2. NIVEL 2: RED INTERNET (WAN / Tránsito: Y = -300 .. -420)
+     * 2. NIVEL 2: RED INTERNET (WAN / Tránsito Seguro: Y = -300 .. -420)
      * ========================================================================= */
     var nodoInternet = addNode(
         pkg, diagram,
-        "Red Internet\n(WAN / Red Pública)",
+        "Red Internet\n(WAN / Red Pública Segura)",
         "device",
-        "Infraestructura de telecomunicaciones pública segura (TCP/IP - TLS 1.3).",
-        270, 610, -300, -420
+        "Infraestructura pública de telecomunicaciones protegida mediante protocolos seguros (TCP/IP - TLS 1.3 / HTTPS).",
+        270, 630, -300, -420
     );
 
     /* =========================================================================
-     * 3. NIVEL 3: SERVIDOR WEB FRONTEND - VERCEL (Y = -480 .. -690)
+     * 3. NIVEL 3: SERVIDOR WEB FRONTEND - RENDER CLOUD (Y = -480 .. -690)
      * ========================================================================= */
     var nodoFrontend = addNode(
         pkg, diagram,
-        "Servidor Web Frontend\n(Vercel Cloud Platform)",
+        "Servidor Web Frontend\n(Render Cloud Platform)",
         "device",
-        "Plataforma PaaS Serverless y CDN global para alojamiento del frontend.",
-        250, 630, -480, -690
+        "Plataforma Cloud de Render encargada del alojamiento de la aplicación PWA, CDN perimetral y entrega de bundles estáticos.",
+        250, 650, -480, -690
     );
-    var envVercel = addExecutionEnv(nodoFrontend, diagram, "Vercel Edge Runtime\n(Node.js Engine)", "executionEnvironment", 280, 600, -540, -670);
-    addArtifact(nodoFrontend, diagram, "FashionStore Web Bundle\n(Next.js / Angular)", "artifact", 300, 580, -590, -655);
+    var envRenderWeb = addExecutionEnv(nodoFrontend, diagram, "Render Static / Node.js Engine", "executionEnvironment", 280, 620, -540, -670);
+    addArtifact(nodoFrontend, diagram, "FashionStore Web Bundle\n(Angular 21 PWA + Service Worker)", "artifact", 300, 600, -590, -655);
 
     /* =========================================================================
-     * 4. NIVEL 4: SERVIDOR BACKEND - GOOGLE CLOUD (Y = -750 .. -980)
+     * 4. NIVEL 4: SERVIDOR BACKEND SAAS - RENDER CLOUD (Y = -750 .. -980)
      * ========================================================================= */
     var nodoBackend = addNode(
         pkg, diagram,
-        "Servidor Backend\n(Google Cloud Platform - Cloud Run)",
+        "Servidor Backend SaaS\n(Render Cloud Platform - Web Service)",
         "device",
-        "Servidor de aplicaciones en la nube para procesamiento de APIs y lógica de negocio.",
-        250, 630, -750, -980
+        "Servicio Web en Render ejecutado en contenedor Docker con FastAPI, validación JWT de tenant_id y lógica de 7 paquetes de dominio.",
+        250, 650, -750, -980
     );
-    var envDocker = addExecutionEnv(nodoBackend, diagram, "Docker Container\n(Python 3.11 + FastAPI)", "executionEnvironment", 280, 600, -810, -960);
-    addArtifact(nodoBackend, diagram, "FashionStore REST API\n(FastAPI / Uvicorn)", "artifact", 300, 580, -870, -945);
+    var envDocker = addExecutionEnv(nodoBackend, diagram, "Docker Container Runtime\n(Python 3.11 + FastAPI / Uvicorn)", "executionEnvironment", 280, 620, -810, -960);
+    addArtifact(nodoBackend, diagram, "FashionStore Core REST API\n(FastAPI - 7 Paquetes p0 a p6)", "artifact", 300, 600, -870, -945);
 
     /* =========================================================================
-     * 5. NIVEL 5: SERVIDOR BASE DE DATOS (Inferior: Y = -1040 .. -1250)
+     * 5. NIVEL 5: SERVIDOR BASE DE DATOS - POSTGRESQL (Y = -1040 .. -1250)
      * ========================================================================= */
     var nodoDatabase = addNode(
         pkg, diagram,
-        "Servidor Base de Datos\n(Cloud PostgreSQL - Neon.Tech / Cloud SQL)",
+        "Servidor Base de Datos\n(Cloud PostgreSQL 15+ - Render / Neon)",
         "device",
-        "Servidor relacional de base de datos transaccional con persistencia y copias de seguridad.",
-        250, 630, -1040, -1250
+        "Servidor PostgreSQL relacional gestionado con soporte multitenant (tenant_id), transacciones ACID y tabla de idempotencia sync_operations.",
+        250, 650, -1040, -1250
     );
-    var envPostgres = addExecutionEnv(nodoDatabase, diagram, "PostgreSQL 16 DBMS Engine", "executionEnvironment", 280, 600, -1100, -1230);
-    addArtifact(nodoDatabase, diagram, "Esquema BD Relacional\n(FashionStore_DB)", "artifact", 300, 580, -1155, -1215);
+    var envPostgres = addExecutionEnv(nodoDatabase, diagram, "PostgreSQL 15+ DBMS Engine\n(Aislamiento Multitenant)", "executionEnvironment", 280, 620, -1100, -1230);
+    addArtifact(nodoDatabase, diagram, "Esquema BD Multitenant\n(FashionStore_DB - 28 Casos de Uso)", "artifact", 300, 600, -1155, -1215);
 
     /* =========================================================================
-     * 6. COLUMNA DERECHA: SERVICIOS CLOUD E IA EXTERNOS (X = 930 .. 1280)
+     * 6. COLUMNA DERECHA: SERVICIOS CLOUD, IA Y PASARELAS (X = 930 .. 1280)
      * ========================================================================= */
     // Servicio 1: Lucy VTON (Probador Virtual / RA)
     var nodoLucy = addNode(
         pkg, diagram,
         "Lucy VTON Service\n(Probador Virtual / RA)",
         "node",
-        "Servicio de Inteligencia Artificial para probador virtual de prendas.",
+        "Servicio de Inteligencia Artificial para probador virtual y renderizado predictivo de prendas sobre silueta humana.",
         930, 1280, -40, -220
     );
     addArtifact(nodoLucy, diagram, "Lucy VTON Inference API", "artifact", 960, 1250, -110, -190);
 
-    // Servicio 2: Cloudinary
+    // Servicio 2: Cloudinary Media Cloud
     var nodoCloudinary = addNode(
         pkg, diagram,
         "Cloudinary Media Cloud\n(Gestión y CDN de Multimedia)",
         "node",
-        "Almacenamiento en la nube y optimización de imágenes de productos y catálogos.",
+        "Almacenamiento en la nube y optimización de imágenes y catálogos multimedia por tenant.",
         930, 1280, -280, -460
     );
     addArtifact(nodoCloudinary, diagram, "Cloudinary REST & CDN API", "artifact", 960, 1250, -350, -430);
@@ -257,40 +256,40 @@ function main() {
     // Servicio 3: Google Gemini AI
     var nodoGemini = addNode(
         pkg, diagram,
-        "Google Cloud - Gemini AI\n(Asistente Inteligente & IA)",
+        "Google Cloud - Gemini AI\n(Asistente Inteligente & RAG Voz)",
         "node",
-        "Modelos de lenguaje multimodal para chatbot y recomendaciones personalizadas.",
+        "Modelos de lenguaje multimodal para consultas en lenguaje natural, RAG asistido por voz y analítica predictiva (p6).",
         930, 1280, -520, -700
     );
-    addArtifact(nodoGemini, diagram, "Gemini 1.5/2.0 Flash API", "artifact", 960, 1250, -590, -670);
+    addArtifact(nodoGemini, diagram, "Gemini 1.5 / 2.0 Flash API", "artifact", 960, 1250, -590, -670);
 
-    // Servicio 4: Stripe
+    // Servicio 4: Stripe Payments
     var nodoStripe = addNode(
         pkg, diagram,
-        "Pasarela de Pago\n(Stripe Payments)",
+        "Pasarela de Pago\n(Stripe Payments Gateway)",
         "node",
-        "Infraestructura de pagos digitales certificada PCI-DSS.",
+        "Infraestructura segura de cobros PCI-DSS para planes de suscripción SaaS y transacciones de pedidos online.",
         930, 1280, -760, -940
     );
-    addArtifact(nodoStripe, diagram, "Stripe Payments REST API", "artifact", 960, 1250, -830, -910);
+    addArtifact(nodoStripe, diagram, "Stripe Payments & Webhooks API", "artifact", 960, 1250, -830, -910);
 
     /* =========================================================================
-     * 7. VÍAS DE COMUNICACIÓN (Communication Paths con Protocolos)
+     * 7. VÍAS DE COMUNICACIÓN (Communication Paths - Sin estereotipo «communication»)
      * ========================================================================= */
     // Flujo Vertical Principal
-    addCommunication(nodoCliente, nodoInternet, "HTTPS :443\n(WSS/TLS 1.3)", "communication");
-    addCommunication(nodoAdmin, nodoInternet, "HTTPS :443\n(TLS 1.3)", "communication");
-    addCommunication(nodoInternet, nodoFrontend, "HTTPS :443\n(CDN / HTTP/2)", "communication");
-    addCommunication(nodoFrontend, nodoBackend, "HTTPS / REST JSON\n(API Calls)", "communication");
-    addCommunication(nodoBackend, nodoDatabase, "psycopg2 / TCP :5432\n(SSL Encrypted)", "communication");
+    addCommunication(nodoCliente, nodoInternet, "HTTPS :443\n(TLS 1.3 / WSS)");
+    addCommunication(nodoAdmin, nodoInternet, "HTTPS :443\n(TLS 1.3)");
+    addCommunication(nodoInternet, nodoFrontend, "HTTPS :443\n(HTTP/2 - Render CDN)");
+    addCommunication(nodoFrontend, nodoBackend, "HTTPS / REST JSON\n(API Calls con JWT tenant_id)");
+    addCommunication(nodoBackend, nodoDatabase, "SQLAlchemy / TCP :5432\n(SSL Encrypted - Pool)");
 
     // Conexiones a Servicios Externos
-    addCommunication(nodoCliente, nodoLucy, "HTTPS :443\n(AR Video Stream)", "communication");
-    addCommunication(nodoBackend, nodoLucy, "HTTPS :443\n(Inference API)", "communication");
-    addCommunication(nodoCliente, nodoCloudinary, "HTTPS :443\n(CDN Image Fetch)", "communication");
-    addCommunication(nodoBackend, nodoCloudinary, "HTTPS :443\n(Media Upload API)", "communication");
-    addCommunication(nodoBackend, nodoGemini, "HTTPS :443\n(REST API)", "communication");
-    addCommunication(nodoBackend, nodoStripe, "HTTPS :443\n(Payment Intents)", "communication");
+    addCommunication(nodoCliente, nodoLucy, "HTTPS :443\n(AR Video Stream)");
+    addCommunication(nodoBackend, nodoLucy, "HTTPS :443\n(Inference API)");
+    addCommunication(nodoCliente, nodoCloudinary, "HTTPS :443\n(CDN Image Fetch)");
+    addCommunication(nodoBackend, nodoCloudinary, "HTTPS :443\n(Media Upload API)");
+    addCommunication(nodoBackend, nodoGemini, "HTTPS :443\n(REST API - Gemini RAG)");
+    addCommunication(nodoBackend, nodoStripe, "HTTPS :443\n(Payment Intents & Webhooks)");
 
     /* =========================================================================
      * 8. GUARDAR, REFRESCAR Y ABRIR DIAGRAMA
@@ -301,7 +300,7 @@ function main() {
     Repository.OpenDiagram(diagram.DiagramID);
 
     log("Diagrama vertical '" + DIAGRAM_NAME + "' generado exitosamente con artefactos independientes.");
-    Session.Prompt("¡Diagrama de Despliegue (Flujo Vertical) generado con éxito en Enterprise Architect!", 0);
+    Session.Prompt("¡Diagrama de Despliegue (FashionStore SaaS en Render) generado con éxito en Enterprise Architect!", 0);
 }
 
 main();

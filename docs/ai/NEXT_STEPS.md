@@ -32,10 +32,25 @@
 
 ---
 
-### Hito 3: Persistencia Local y Modo Offline del Catálogo (CU08 & CU09 - TAREA INMEDIATA)
+### Hito 3: Persistencia Local y Modo Offline del Catálogo (CU08 & CU09 - COMPLETADOS)
 1. **Frontend PWA (Angular 21):**
-   - [ ] Configurar Service Worker y Web App Manifest.
-   - [ ] Crear `src/app/core/offline/idb.service.ts` para consumir `/api/catalog/offline-pack` y almacenar catálogo en IndexedDB.
-   - [ ] Banner visual de estado de conectividad con advertencia de datos locales en caché.
-2. **Aplicación Móvil (Flutter / Dart):**
+   - [x] Crear [`idb-catalog.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/idb-catalog.service.ts) sobre API IndexedDB nativa (`fashionstore_local_db` v1 con almacenes `catalog_products` y `catalog_meta`).
+   - [x] Crear [`network-status.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/network-status.service.ts) con escucha de eventos de red y soporte de simulación desconectada.
+   - [x] Conmutación transparente a IndexedDB en [`catalog-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/catalog-page.component.ts) con filtrado multicriterio en memoria.
+   - [x] Banner visual en ámbar/pizarra con timestamp de sincronización y badge dinámico de conteo en caché.
+   - [x] Botón explícito de descarga / refresco de catálogo local (`CU08`).
+   - [x] Refinamiento estético y funcional en matriz de variantes de [`admin-catalog-page.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-catalog-page.component.html) (`frontend-design`).
+   - [x] Compilación validada con `ng build` (0 errores de TypeScript y plantillas).
+
+---
+
+### Hito 4: Presentación 2 — Traslados Multisede y Pagos con Stripe (CU11 & CU12 - TAREA INMEDIATA)
+1. **CU11: Registrar y Autorizar Traslados de Mercadería:**
+   - [ ] Endpoints en `p3_gestion_inventario_disponibilidad` para creación de orden de traslado, validación de stock en origen, estado `EN_TRANSITO` y confirmación de recepción con estado `COMPLETADO`.
+   - [ ] Pantalla y flujos en Frontend Web para encargados de sucursal.
+2. **CU12: Comprar Prendas con Pasarela Stripe y Despacho Condicionado:**
+   - [ ] Integración con Stripe API (`PaymentIntent` y webhooks `payment_intent.succeeded`).
+   - [ ] **Política Inviolable:** Generación de orden de despacho logístico condicionada estrictamente a la confirmación de pago (`status = 'paid'`).
+3. **Aplicación Móvil (Flutter / Dart):**
    - [ ] Persistencia local en SQLite (`sqflite`) consumiendo `/api/catalog/offline-pack`.
+   - [ ] Mapa interactivo de sucursales con OpenStreetMap y geolocalización (CU21).

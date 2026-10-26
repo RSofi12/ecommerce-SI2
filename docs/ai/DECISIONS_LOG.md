@@ -78,3 +78,16 @@
   - Se potenció `GET /api/catalog/availability`: si se omite `branch_id`, devuelve el desglose de stock de todas las sucursales activas del tenant (`quantity`, `reserved_quantity`, `available_quantity = max(quantity - reserved, 0)`) y el total consolidado; si se especifica `branch_id`, preserva el contrato histórico de sucursal única para compatibilidad absoluta.
   - En Frontend (`ProductDetailPageComponent`), se diseñó un modal responsivo bajo lineamientos de `frontend-design`: resumen de red de tiendas, estados visuales por colores (disponible >5, últimas unidades 1-5, sin stock), dirección con geolocalización, teléfono y horario de atención.
   - Creación de la suite de pruebas unitarias y de integración `backend/tests/test_cu10_stock_availability.py` (4/4 pruebas aprobadas) y validación de 18 pruebas de regresión en verde.
+
+### Registro 13 (2026-10-25) — Motor de Catálogo Offline en IndexedDB y Detección Reactiva de Conectividad (CU08 / CU09 / CU06 / CU07)
+- **Problema Detectado:**
+  1. El backend contaba con endpoints `/api/catalog/offline-pack` y `/api/catalog/offline-sync`, pero la aplicación Angular PWA carecía completamente de capa de persistencia local en cliente (IndexedDB).
+  2. En modo desconectado (falla de red o modo avión), el catálogo público simplemente fallaba con error HTTP, sin mecanismo de conmutación transparente a caché ni indicador visual de estado.
+  3. En el catálogo administrativo (CU06), la matriz de variantes carecía de jerarquía visual intuitiva para definir precios diferenciados por talla/color.
+- **Decisión y Solución Técnica:**
+  - Se implementó `IdbCatalogService` (`src/app/core/offline/idb-catalog.service.ts`) nativo sobre la API de IndexedDB del navegador (`fashionstore_local_db` v1), con almacenes para `catalog_products` y `catalog_meta` (timestamp de sincronización, total de ítems, versión).
+  - Se implementó `NetworkStatusService` (`src/app/core/offline/network-status.service.ts`) con señales reactivas `isOnline`, `simulatedOffline`, `effectiveOnline`, escuchando eventos `online`/`offline` de `window` y permitiendo simulación de contingencia desde la interfaz.
+  - En `CatalogPageComponent` (CU07/CU08/CU09), se configuró degradación elegante: si la red falla o está en modo desconectado, consulta automáticamente IndexedDB, aplicando motor de filtrado en memoria (búsqueda por texto, categoría, talla y color) y desplegando un banner contextual ámbar/pizarra con fecha del último snapshot.
+  - Se añadió botón explícito para descargar/refrescar el catálogo local (CU08) con badge dinámico de conteo de prendas en caché.
+  - En `AdminCatalogPageComponent` (CU06), se refinó la interfaz con la skill `frontend-design`: numeración clara de variantes (`#1`, `#2`), contenedor sutil con borde definido, textos de ayuda conceptuales para el precio por talla y acciones de eliminación fluidas.
+  - Formato estricto ICONIX en flujos alternativos referenciando puntos del flujo principal (`2. A1:`, `4. A2:`, etc.).
