@@ -88,4 +88,89 @@ void main() {
       isTrue,
     );
   });
+
+  test('parsea disponibilidad multisede por sucursal (CU10)', () {
+    final availability = MultiBranchAvailability.fromJson({
+      'variant_id': 'var-123',
+      'tenant_id': 'tenant-abc',
+      'total_available': 15,
+      'branches': [
+        {
+          'branch_id': 'b-1',
+          'branch_name': 'Sucursal Central',
+          'city': 'Santa Cruz',
+          'address': 'Av. Monseñor Rivero 200',
+          'phone': '70012345',
+          'opening_hours': '09:00 - 20:00',
+          'available_quantity': 10,
+          'quantity': 12,
+          'reserved_quantity': 2,
+          'is_active': true,
+        },
+        {
+          'branch_id': 'b-2',
+          'branch_name': 'Sucursal Equipetrol',
+          'city': 'Santa Cruz',
+          'address': 'Calle 7 Este',
+          'phone': '70054321',
+          'opening_hours': '10:00 - 21:00',
+          'available_quantity': 5,
+          'quantity': 5,
+          'reserved_quantity': 0,
+          'is_active': true,
+        },
+      ],
+    });
+
+    expect(availability.variantId, 'var-123');
+    expect(availability.totalAvailable, 15);
+    expect(availability.branches, hasLength(2));
+    expect(availability.branches[0].branchName, 'Sucursal Central');
+    expect(availability.branches[0].availableQuantity, 10);
+    expect(availability.branches[1].availableQuantity, 5);
+  });
+
+  test('parsea snapshot de catalogo offline y metadatos (CU08 y CU09)', () {
+    final pack = OfflineCatalogPack.fromJson({
+      'version': '1.0',
+      'synced_at': '2026-10-26T03:00:00Z',
+      'tenant_id': 'tenant-abc',
+      'branch_id': 'b-1',
+      'products': [
+        {
+          'id': 'p-1',
+          'name': 'Vestido Seda',
+          'category_id': 'cat-1',
+          'sku': 'SKU-VEST-01',
+          'status': 'active',
+          'variants': [
+            {
+              'id': 'v-1',
+              'product_id': 'p-1',
+              'sku': 'SKU-VEST-01-M',
+              'price': 85.0,
+              'status': 'active',
+              'branch_quantity': 4,
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(pack.version, '1.0');
+    expect(pack.products, hasLength(1));
+    expect(pack.products.first.name, 'Vestido Seda');
+    expect(pack.products.first.variants?.first.price, 85.0);
+
+    final meta = OfflineSyncMeta.fromMap({
+      'synced_at': '2026-10-26T03:00:00Z',
+      'product_count': 1,
+      'version': '1.0',
+      'branch_id': 'b-1',
+    });
+
+    expect(meta.productCount, 1);
+    expect(meta.version, '1.0');
+    expect(meta.branchId, 'b-1');
+  });
 }

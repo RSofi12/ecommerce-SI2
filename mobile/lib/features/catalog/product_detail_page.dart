@@ -13,6 +13,7 @@ import '../../shared/widgets/product_image.dart';
 import '../../shared/widgets/product_price.dart';
 import '../../shared/widgets/quantity_selector.dart';
 import '../../shared/widgets/variant_selector.dart';
+import 'catalog_api.dart';
 import 'catalog_models.dart';
 import 'virtual_try_on_page.dart';
 
@@ -56,6 +57,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   int _selectedVariantIndex = 0;
   int _quantity = 1;
   bool _addingToCart = false;
+  bool _loadingAvailability = false;
 
   Product? get _product => widget.arguments?.product;
 
@@ -171,6 +173,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             label: 'Reservar prenda',
             icon: const Icon(Icons.bookmark_add_outlined),
             onPressed: _canReserve(product, variant) ? _reserveGarment : null,
+            variant: AppButtonVariant.outlined,
+            expand: true,
+          ),
+          const SizedBox(height: 12),
+          AppButton(
+            label: 'Ver disponibilidad en tiendas',
+            icon: const Icon(Icons.storefront_outlined),
+            onPressed: () => _checkMultiBranchAvailability(
+              variant?.id ?? product.variants?.firstOrNull?.id,
+            ),
+            isLoading: _loadingAvailability,
             variant: AppButtonVariant.outlined,
             expand: true,
           ),
@@ -397,6 +410,222 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         .where((branch) => branch.id == id)
         .firstOrNull
         ?.name;
+  }
+
+  Future<void> _checkMultiBranchAvailability(String? variantId) async {
+    if (variantId == null || variantId.isEmpty) {
+      AppSnackBar.show(context, 'Selecciona una talla o variante primero.');
+      return;
+    }
+
+    setState(() => _loadingAvailability = true);
+    try {
+      final api = CatalogApi(
+        tokenProvider: () => widget.authController?.accessToken,
+        onUnauthorized: widget.authController?.handleUnauthorized,
+      );
+      final availability = await api.getVariantAvailability(variantId: variantId);
+      if (!mounted) return;
+      _showAvailabilityBottomSheet(availability);
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackBar.show(context, 'No se pudo consultar el stock por sucursal.');
+    } finally {
+      if (mounted) setState(() => _loadingAvailability = false);
+    }
+  }
+
+  void _showAvailabilityBottomSheet(MultiBranchAvailability availability) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Stock en Sucursales',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text(
+                          'Total Red: ${availability.totalAvailable}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Disponibilidad física inmediata en las tiendas de la marca.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const Divider(height: 24),
+                  Expanded(
+                    child: availability.branches.isEmpty
+                        ? const Center(
+                            child: Text('No hay sucursales activas registradas.'),
+                          )
+                        : ListView.separated(
+                            controller: scrollController,
+                            itemCount: availability.branches.length,
+                            separatorBuilder: (_, __) => const Divider(height: 16),
+                            itemBuilder: (context, index) {
+                              final branch = availability.branches[index];
+                              final isAvail = branch.availableQuantity > 5;
+                              final isLow = branch.availableQuantity > 0 && branch.availableQuantity <= 5;
+
+                              final badgeColor = isAvail
+                                  ? Colors.green.shade50
+                                  : isLow
+                                      ? Colors.amber.shade50
+                                      : Colors.red.shade50;
+                              final textColor = isAvail
+                                  ? Colors.green.shade800
+                                  : isLow
+                                      ? Colors.amber.shade900
+                                      : Colors.red.shade800;
+                              final borderColor = isAvail
+                                  ? Colors.green.shade200
+                                  : isLow
+                                      ? Colors.amber.shade300
+                                      : Colors.red.shade200;
+                              final badgeText = isAvail
+                                  ? 'Disponible (${branch.availableQuantity})'
+                                  : isLow
+                                      ? 'Últimas ${branch.availableQuantity}'
+                                      : 'Agotado';
+
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          branch.branchName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        if (branch.city != null)
+                                          Text(
+                                            branch.city!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        if (branch.address != null && branch.address!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.place_outlined, size: 13, color: Colors.grey.shade600),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    branch.address!,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey.shade700,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        if (branch.phone != null && branch.phone!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.phone_outlined, size: 13, color: Colors.grey.shade600),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  branch.phone!,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey.shade700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: borderColor),
+                                    ),
+                                    child: Text(
+                                      badgeText,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _detailLine(String label, String value) {

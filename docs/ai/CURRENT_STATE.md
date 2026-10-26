@@ -52,5 +52,14 @@
 * **Pendiente Inmediato:** CU11 (Traslados de mercadería entre sucursales) y CU12 (Pasarela Stripe con despacho condicionado).
 
 #### Aplicación Móvil (Flutter / Dart)
-* **Estructura:** `mobile/lib/` con features desacopladas.
-* **Pendiente Inmediato:** Integración de persistencia local en SQLite (`sqflite`), mapa con OpenStreetMap (`flutter_map` consumiendo coordenadas del CU04 / CU21) y cola de sincronización offline.
+* **Estructura:** `mobile/lib/` con arquitectura por capas (core, shared, features).
+* **Catálogo Offline y Almacenamiento Local (CU08 y CU09 Implementados):**
+  - Motor SQLite nativo con `sqflite` en [`local_catalog_db.dart`](file:///c:/Users/PERSONAL/ecommerce-SI2/mobile/lib/core/storage/local_catalog_db.dart) (`fashionstore_local.db` con tablas `local_products` y `catalog_sync_meta`).
+  - Fallback automático y resiliente a base local en `CatalogController` ante ausencia de red.
+  - Banner visual ámbar de modo offline con indicador de última sincronización y conmutador de simulación offline en [`catalog_page.dart`](file:///c:/Users/PERSONAL/ecommerce-SI2/mobile/lib/features/catalog/catalog_page.dart).
+  - Descarga explícita del snapshot de catálogo (`/api/catalog/offline-pack`).
+* **Consulta de Disponibilidad Multisede (CU10 Implementado):**
+  - Consumo de `/api/catalog/availability` con modelos `MultiBranchAvailability` y `BranchStockInfo`.
+  - Bottom Sheet interactivo en [`product_detail_page.dart`](file:///c:/Users/PERSONAL/ecommerce-SI2/mobile/lib/features/catalog/product_detail_page.dart) con desglose por sucursales físicas activas, cálculo de stock real y datos de contacto de cada tienda.
+* **Suites de Pruebas Móviles:** 11/11 tests pasando (`catalog_models_test.dart`, `catalog_page_test.dart`, `product_detail_page_test.dart`).
+* **Pendiente Inmediato:** Presentación 2: CU11 (Traslados de inventario), CU12 (Stripe) y CU16-CU18 (Ventas POS offline con cola de sincronización e idempotencia).

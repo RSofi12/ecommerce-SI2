@@ -122,6 +122,8 @@ void main() {
           productId: 'product-id',
           sku: 'SKU-2',
           price: 125,
+          sizeId: 'size-m',
+          colorId: 'color-red',
           status: ProductStatus.active,
           branchQuantity: 4,
           imageUrl: 'variant-image',
@@ -177,10 +179,24 @@ void main() {
 
     await tester.tap(find.text('Abrir detalle'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).first, const Offset(0, -700));
-    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.text('M · Rojo · SKU-2'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('M · Rojo · SKU-2'));
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byTooltip('Aumentar cantidad'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byTooltip('Aumentar cantidad'));
+    await tester.scrollUntilVisible(
+      find.widgetWithText(OutlinedButton, 'Reservar prenda'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.widgetWithText(OutlinedButton, 'Reservar prenda'));
     await tester.pumpAndSettle();
 

@@ -43,6 +43,51 @@ class CatalogApi {
     );
   }
 
+  Future<Map<String, dynamic>> getOfflinePack({
+    String? branchId,
+    String? tenantId,
+  }) async {
+    final queryParameters = <String, dynamic>{};
+    if (branchId != null && branchId.isNotEmpty) {
+      queryParameters['branch_id'] = branchId;
+    }
+    if (tenantId != null && tenantId.isNotEmpty) {
+      queryParameters['tenant_id'] = tenantId;
+    }
+
+    final response = await _client.get<Map<String, dynamic>>(
+      'catalog/offline-pack',
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      parser: (value) => Map<String, dynamic>.from(value as Map),
+    );
+    return response.data ?? const <String, dynamic>{};
+  }
+
+  Future<MultiBranchAvailability> getVariantAvailability({
+    required String variantId,
+    String? tenantId,
+  }) async {
+    final queryParameters = <String, dynamic>{
+      'variant_id': variantId,
+    };
+    if (tenantId != null && tenantId.isNotEmpty) {
+      queryParameters['tenant_id'] = tenantId;
+    }
+
+    final response = await _client.get<MultiBranchAvailability>(
+      'catalog/availability',
+      queryParameters: queryParameters,
+      parser: (value) => MultiBranchAvailability.fromJson(
+        Map<String, dynamic>.from(value as Map),
+      ),
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const FormatException('Respuesta de disponibilidad inválida');
+    }
+    return data;
+  }
+
   Future<CollaborativeRecommendations> getCollaborativeRecommendations({
     required String userId,
     String? branchId,

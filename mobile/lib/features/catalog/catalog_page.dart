@@ -87,6 +87,10 @@ class _CatalogPageState extends State<CatalogPage> {
                 subtitle: 'Explora las prendas disponibles en FashionStore.',
               ),
               const SizedBox(height: 20),
+              if (_controller.isOffline) ...[
+                _offlineBanner(),
+                const SizedBox(height: 12),
+              ],
               _shortcuts(),
               const SizedBox(height: 20),
               _searchField(),
@@ -110,6 +114,101 @@ class _CatalogPageState extends State<CatalogPage> {
     );
   }
 
+  Widget _offlineBanner() {
+    final meta = _controller.syncMeta;
+    final lastSyncText = meta != null
+        ? 'Sincronizado: ${meta.syncedAt.hour.toString().padLeft(2, '0')}:${meta.syncedAt.minute.toString().padLeft(2, '0')}'
+        : 'Caché SQLite activa';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFF59E0B)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Color(0xFFB45309), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Modo Offline Activo (CU09)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+                Text(
+                  'Navegando catálogo local (SQLite CU08). $lastSyncText',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFB45309),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () async {
+              _controller.toggleSimulatedOffline();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_controller.isOffline
+                      ? 'Simulación offline activada'
+                      : 'Modo online restablecido'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Text(
+              _controller.isOffline ? 'Reconectar' : 'Offline',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF92400E),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleOfflineAction(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Descargando catálogo local para modo offline (CU08)...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      final count = await _controller.downloadOfflineCatalog();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Catálogo offline listo: $count productos guardados en SQLite.'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al descargar catálogo offline: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   Widget _searchField() {
     return TextField(
       controller: _searchController,
@@ -118,10 +217,27 @@ class _CatalogPageState extends State<CatalogPage> {
       decoration: InputDecoration(
         hintText: 'Buscar productos',
         prefixIcon: const Icon(Icons.search),
-        suffixIcon: IconButton(
-          tooltip: 'Buscar',
-          onPressed: () => _search(_searchController.text),
-          icon: const Icon(Icons.arrow_forward),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: _controller.isOffline
+                  ? 'Modo Offline activo (SQLite CU08)'
+                  : 'Descargar catálogo offline (CU08)',
+              icon: Icon(
+                _controller.isOffline
+                    ? Icons.cloud_off_rounded
+                    : Icons.download_for_offline_outlined,
+                color: _controller.isOffline ? const Color(0xFFD97706) : null,
+              ),
+              onPressed: () => _handleOfflineAction(context),
+            ),
+            IconButton(
+              tooltip: 'Buscar',
+              onPressed: () => _search(_searchController.text),
+              icon: const Icon(Icons.arrow_forward),
+            ),
+          ],
         ),
       ),
     );
@@ -143,6 +259,7 @@ class _CatalogPageState extends State<CatalogPage> {
           child: AppButton(
             label: 'Reservas',
             icon: const Icon(Icons.event_available_outlined),
+            variant: AppButtonVariant.outlined,
             onPressed: () => Navigator.of(context).pushNamed(
               AppRoutes.reservationCreate,
               arguments: ReservationArguments(

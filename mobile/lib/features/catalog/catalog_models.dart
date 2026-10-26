@@ -121,6 +121,144 @@ class Product {
   }
 }
 
+class MultiBranchAvailability {
+  const MultiBranchAvailability({
+    required this.variantId,
+    this.tenantId,
+    required this.totalAvailable,
+    required this.branches,
+  });
+
+  final String variantId;
+  final String? tenantId;
+  final int totalAvailable;
+  final List<BranchStockInfo> branches;
+
+  factory MultiBranchAvailability.fromJson(Map<String, dynamic> json) {
+    final branchesRaw = json['branches'];
+    final branches = branchesRaw is List
+        ? branchesRaw
+            .whereType<Map>()
+            .map((e) => BranchStockInfo.fromJson(Map<String, dynamic>.from(e)))
+            .toList(growable: false)
+        : const <BranchStockInfo>[];
+
+    return MultiBranchAvailability(
+      variantId: _requiredString(json, 'variant_id'),
+      tenantId: _optionalString(json, 'tenant_id'),
+      totalAvailable: _optionalInt(json, 'total_available') ?? 0,
+      branches: branches,
+    );
+  }
+}
+
+class BranchStockInfo {
+  const BranchStockInfo({
+    required this.branchId,
+    required this.branchName,
+    this.city,
+    this.address,
+    this.phone,
+    this.openingHours,
+    required this.availableQuantity,
+    required this.quantity,
+    required this.reservedQuantity,
+    required this.isActive,
+  });
+
+  final String branchId;
+  final String branchName;
+  final String? city;
+  final String? address;
+  final String? phone;
+  final String? openingHours;
+  final int availableQuantity;
+  final int quantity;
+  final int reservedQuantity;
+  final bool isActive;
+
+  factory BranchStockInfo.fromJson(Map<String, dynamic> json) {
+    return BranchStockInfo(
+      branchId: _requiredString(json, 'branch_id'),
+      branchName: _requiredString(json, 'branch_name'),
+      city: _optionalString(json, 'city'),
+      address: _optionalString(json, 'address'),
+      phone: _optionalString(json, 'phone'),
+      openingHours: _optionalString(json, 'opening_hours'),
+      availableQuantity: _optionalInt(json, 'available_quantity') ?? 0,
+      quantity: _optionalInt(json, 'quantity') ?? 0,
+      reservedQuantity: _optionalInt(json, 'reserved_quantity') ?? 0,
+      isActive: json['is_active'] == true,
+    );
+  }
+}
+
+class OfflineSyncMeta {
+  const OfflineSyncMeta({
+    required this.syncedAt,
+    required this.productCount,
+    required this.version,
+    this.branchId,
+  });
+
+  final DateTime syncedAt;
+  final int productCount;
+  final String version;
+  final String? branchId;
+
+  factory OfflineSyncMeta.fromMap(Map<String, dynamic> map) {
+    return OfflineSyncMeta(
+      syncedAt: DateTime.tryParse(map['synced_at']?.toString() ?? '') ?? DateTime.now(),
+      productCount: (map['product_count'] as num?)?.toInt() ?? 0,
+      version: map['version']?.toString() ?? '1.0',
+      branchId: map['branch_id']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'synced_at': syncedAt.toIso8601String(),
+      'product_count': productCount,
+      'version': version,
+      if (branchId != null) 'branch_id': branchId,
+    };
+  }
+}
+
+class OfflineCatalogPack {
+  const OfflineCatalogPack({
+    required this.version,
+    required this.syncedAt,
+    this.tenantId,
+    this.branchId,
+    required this.products,
+  });
+
+  final String version;
+  final String syncedAt;
+  final String? tenantId;
+  final String? branchId;
+  final List<Product> products;
+
+  factory OfflineCatalogPack.fromJson(Map<String, dynamic> json) {
+    final rawProducts = json['products'];
+    final products = rawProducts is List
+        ? rawProducts
+            .whereType<Map>()
+            .map((e) => Product.fromJson(Map<String, dynamic>.from(e)))
+            .toList(growable: false)
+        : const <Product>[];
+
+    return OfflineCatalogPack(
+      version: _requiredString(json, 'version'),
+      syncedAt: _requiredString(json, 'synced_at'),
+      tenantId: _optionalString(json, 'tenant_id'),
+      branchId: _optionalString(json, 'branch_id'),
+      products: products,
+    );
+  }
+}
+
 class CollaborativeRecommendation {
   const CollaborativeRecommendation({required this.productId, this.score});
 

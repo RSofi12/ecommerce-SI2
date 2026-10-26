@@ -33,6 +33,12 @@
    - **Frontend UI/UX en Catálogo Público (CU07/CU08/CU09):** En [`catalog-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/catalog-page.component.ts), fallback automático a IndexedDB con búsqueda/filtrado en memoria ante cortes de red o llamadas fallidas, banner ámbar/pizarra con fecha de sincronización, botón de descarga manual de catálogo local con badge dinámico de conteo, botón de toggle para simulación offline y estados deliberados de vacío (`frontend-design`).
    - **Pulido de UI en Catálogo Admin (CU06):** En [`admin-catalog-page.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-catalog-page.component.html), diseño fluido de matriz de variantes con numeración `#1`, `#2`, textos de ayuda para precios por talla y acciones refinadas.
 
+8. **Mobile Flutter – Catálogo Offline SQLite y Disponibilidad Multisede (CU08, CU09, CU10 - CONSOLIDADO):**
+   - **Persistencia Nativa en SQLite (CU08):** Implementación de [`local_catalog_db.dart`](file:///c:/Users/PERSONAL/ecommerce-SI2/mobile/lib/core/storage/local_catalog_db.dart) (`fashionstore_local.db` con `local_products` y `catalog_sync_meta`) utilizando dependencias oficiales `sqflite` y `path`.
+   - **Navegación Offline y Resiliencia (CU09):** Conmutación automática a SQLite en `CatalogController` ante fallos de conexión, filtrado multicriterio en memoria, banner informativo ámbar con timestamp y conmutador de simulación offline.
+   - **Disponibilidad Multisede (CU10):** Bottom Sheet interactivo en [`product_detail_page.dart`](file:///c:/Users/PERSONAL/ecommerce-SI2/mobile/lib/features/catalog/product_detail_page.dart) con desglose por sucursales físicas activas de la empresa, cálculo de stock disponible real y datos de contacto de cada sucursal.
+   - **Suites de Pruebas Móviles:** 11/11 pruebas aprobadas (`catalog_models_test.dart`, `catalog_page_test.dart`, `product_detail_page_test.dart`).
+
 ---
 
 ### 2. Credenciales Oficiales de Prueba (Sembradas en BD Central)

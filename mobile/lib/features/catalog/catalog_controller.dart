@@ -1,15 +1,21 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 
 import '../../core/network/api_exception.dart';
+import '../../core/storage/local_catalog_db.dart';
 import 'catalog_api.dart';
 import 'catalog_models.dart';
 
 enum CatalogStatus { idle, loading, ready, error }
 
 class CatalogController extends ChangeNotifier {
-  CatalogController({CatalogApi? api}) : _api = api ?? CatalogApi();
+  CatalogController({
+    CatalogApi? api,
+    LocalCatalogDb? localDb,
+  })  : _api = api ?? CatalogApi(),
+        _localDb = localDb ?? LocalCatalogDb();
 
   final CatalogApi _api;
+  final LocalCatalogDb _localDb;
 
   CatalogStatus status = CatalogStatus.idle;
   String? errorMessage;
@@ -28,10 +34,18 @@ class CatalogController extends ChangeNotifier {
   String? seasonId;
   String? collectionId;
 
+  // Estado Offline (CU08 / CU09)
+  bool isOffline = false;
+  bool isDownloadingOffline = false;
+  OfflineSyncMeta? syncMeta;
+  int cachedProductCount = 0;
+
   Future<void> load() async {
     status = CatalogStatus.loading;
     errorMessage = null;
     notifyListeners();
+
+    await loadOfflineMeta();
 
     try {
       branches = await _api.getBranches();
@@ -40,13 +54,60 @@ class CatalogController extends ChangeNotifier {
           .firstOrNull
           ?.id;
       await Future.wait([_loadProducts(), _loadFilters()]);
+      isOffline = false;
       status = CatalogStatus.ready;
       notifyListeners();
     } catch (error) {
-      status = CatalogStatus.error;
-      errorMessage = _messageFor(error);
-      notifyListeners();
+      // Fallback resiliente a SQLite
+      await _fallbackToLocalDatabase(error);
     }
+  }
+
+  Future<void> loadOfflineMeta() async {
+    try {
+      syncMeta = await _localDb.getSyncMeta();
+      cachedProductCount = await _localDb.getCachedProductCount();
+    } catch (_) {
+      // Ignorar errores de lectura inicial
+    }
+    notifyListeners();
+  }
+
+  Future<bool> downloadOfflineCatalog() async {
+    isDownloadingOffline = true;
+    notifyListeners();
+
+    try {
+      final pack = await _api.getOfflinePack(branchId: branchId);
+      final count = await _localDb.saveOfflinePack(pack);
+      cachedProductCount = count;
+      syncMeta = await _localDb.getSyncMeta();
+      isDownloadingOffline = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      isDownloadingOffline = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> toggleSimulatedOffline() async {
+    isOffline = !isOffline;
+    if (isOffline) {
+      final localProducts = await _localDb.queryProducts(
+        query: searchQuery,
+        categoryId: categoryId,
+        sizeId: sizeId,
+        colorId: colorId,
+      );
+      products = localProducts;
+      status = CatalogStatus.ready;
+      errorMessage = null;
+    } else {
+      await _reloadProducts();
+    }
+    notifyListeners();
   }
 
   Future<void> updateFilters({
@@ -77,6 +138,16 @@ class CatalogController extends ChangeNotifier {
   }
 
   Future<void> _loadProducts() async {
+    if (isOffline) {
+      products = await _localDb.queryProducts(
+        query: searchQuery,
+        categoryId: categoryId,
+        sizeId: sizeId,
+        colorId: colorId,
+      );
+      return;
+    }
+
     products = await _api.getProducts(
       query: searchQuery,
       branchId: branchId,
@@ -107,14 +178,34 @@ class CatalogController extends ChangeNotifier {
     status = CatalogStatus.loading;
     errorMessage = null;
     notifyListeners();
+
     try {
       await _loadProducts();
+      isOffline = false;
       status = CatalogStatus.ready;
     } catch (error) {
-      status = CatalogStatus.error;
-      errorMessage = _messageFor(error);
+      await _fallbackToLocalDatabase(error);
     }
     notifyListeners();
+  }
+
+  Future<void> _fallbackToLocalDatabase(Object originalError) async {
+    final localProducts = await _localDb.queryProducts(
+      query: searchQuery,
+      categoryId: categoryId,
+      sizeId: sizeId,
+      colorId: colorId,
+    );
+
+    if (localProducts.isNotEmpty || cachedProductCount > 0) {
+      products = localProducts;
+      isOffline = true;
+      status = CatalogStatus.ready;
+      errorMessage = null;
+    } else {
+      status = CatalogStatus.error;
+      errorMessage = _messageFor(originalError);
+    }
   }
 
   static String _messageFor(Object error) {

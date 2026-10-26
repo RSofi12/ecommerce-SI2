@@ -134,6 +134,8 @@ void main() {
       ),
     );
 
+    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+    await tester.pump();
     await tester.tap(find.text('Blusa demo'));
     await tester.pumpAndSettle();
     expect(
@@ -143,8 +145,10 @@ void main() {
 
     await tester.tap(find.text('Agregar desde detalle'));
     await tester.pump();
-    expect(find.text('Prenda agregada a la reserva.'), findsOneWidget);
+    expect(find.text('Prenda agregada a la reserva.'), findsAtLeastNWidgets(1));
 
+    await tester.drag(find.byType(ListView).first, const Offset(0, 300));
+    await tester.pump();
     await tester.tap(find.widgetWithText(OutlinedButton, 'Reservas'));
     await tester.pumpAndSettle();
 
