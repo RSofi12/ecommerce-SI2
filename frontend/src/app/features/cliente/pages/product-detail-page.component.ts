@@ -9,7 +9,13 @@ import { HlmBadgeImports } from '../../../components/badge/src';
 import { HlmButton } from '../../../components/button/src';
 import { HlmCardImports } from '../../../components/card/src';
 import { getErrorMessage } from '../../../core/utils/http-error.util';
-import { CatalogNameItem, CatalogProduct, CatalogProductVariant } from '../../shared/models/catalog.model';
+import {
+  BranchStockItem,
+  CatalogNameItem,
+  CatalogProduct,
+  CatalogProductVariant,
+  VariantMultiBranchAvailability,
+} from '../../shared/models/catalog.model';
 import { CatalogApiService } from '../../shared/services/catalog-api.service';
 import { ChatbotUiService } from '../../shared/services/chatbot-ui.service';
 import { VirtualTryOnComponent } from '../../shared/components/virtual-try-on.component';
@@ -34,6 +40,9 @@ export class ProductDetailPageComponent {
   protected readonly selectedVariantId = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly origin = signal('/app/cliente');
+  protected readonly showAvailabilityModal = signal(false);
+  protected readonly loadingAvailability = signal(false);
+  protected readonly availabilityData = signal<VariantMultiBranchAvailability | null>(null);
 
   constructor() {
     this.chatbotUi.requestClose();
@@ -57,6 +66,53 @@ export class ProductDetailPageComponent {
     const size = this.sizes().find((item) => item.id === variant.size_id)?.name ?? 'Sin talla';
     const color = this.colors().find((item) => item.id === variant.color_id)?.name ?? 'Sin color';
     return `${size} / ${color}`;
+  }
+
+  protected async openAvailabilityModal(): Promise<void> {
+    const variant = this.selectedVariant();
+    if (!variant) {
+      toast.error('Selecciona una variante primero');
+      return;
+    }
+    this.showAvailabilityModal.set(true);
+    this.loadingAvailability.set(true);
+    try {
+      const resp = await firstValueFrom(this.api.getVariantMultiBranchAvailability(variant.id));
+      this.availabilityData.set(resp.data ?? null);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'No se pudo consultar la disponibilidad en sucursales.'));
+    } finally {
+      this.loadingAvailability.set(false);
+    }
+  }
+
+  protected closeAvailabilityModal(): void {
+    this.showAvailabilityModal.set(false);
+  }
+
+  protected getStockStatus(available: number): { label: string; bgClass: string; textClass: string; borderClass: string } {
+    if (available > 5) {
+      return {
+        label: `Disponible (${available} unid.)`,
+        bgClass: 'bg-emerald-50',
+        textClass: 'text-emerald-700',
+        borderClass: 'border-emerald-200',
+      };
+    }
+    if (available > 0) {
+      return {
+        label: `Últimas ${available} unid.`,
+        bgClass: 'bg-amber-50',
+        textClass: 'text-amber-700',
+        borderClass: 'border-amber-200',
+      };
+    }
+    return {
+      label: 'Sin stock en tienda',
+      bgClass: 'bg-slate-100',
+      textClass: 'text-slate-500',
+      borderClass: 'border-slate-200',
+    };
   }
 
   protected goBack(): void {

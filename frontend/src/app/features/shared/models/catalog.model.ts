@@ -140,4 +140,25 @@ export interface UpdateProductRequest {
   variants: CreateProductVariantRequest[];
 }
 
+export interface BranchStockItem {
+  branch_id: string;
+  branch_name: string;
+  city: string;
+  address: string;
+  phone: string;
+  opening_hours: string;
+  quantity: number;
+  reserved_quantity: number;
+  available_quantity: number;
+}
+
+export interface VariantMultiBranchAvailability {
+  variant_id: string;
+  product_id: string;
+  product_name: string;
+  sku: string;
+  total_available: number;
+  branches: BranchStockItem[];
+}
+
 export type ListResponse<T> = ApiResponse<T[]>;

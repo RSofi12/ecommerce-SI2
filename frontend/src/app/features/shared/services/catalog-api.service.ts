@@ -20,6 +20,8 @@ import {
   UpdateNameItemRequest,
   UpdateProductRequest,
   Point,
+  BranchStockItem,
+  VariantMultiBranchAvailability,
 } from '../models/catalog.model';
 
 @Injectable({ providedIn: 'root' })
@@ -206,6 +208,12 @@ export class CatalogApiService {
   getVariantAvailability(variantId: string, branchId: string) {
     return this.api.get<ApiResponse<{ variant_id: string; branch_id: string; quantity: number }>>(
       `/catalog/availability?variant_id=${variantId}&branch_id=${branchId}`,
+    );
+  }
+
+  getVariantMultiBranchAvailability(variantId: string) {
+    return this.api.get<ApiResponse<VariantMultiBranchAvailability>>(
+      `/catalog/availability?variant_id=${variantId}`,
     );
   }
 
