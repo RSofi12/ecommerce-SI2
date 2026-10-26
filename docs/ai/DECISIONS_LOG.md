@@ -64,3 +64,17 @@
   - Serialización de `tenant_id` en `ProductRead` y `ProductVariantRead`.
   - Filtro opcional por `tenant_id` en `GET /api/catalog/products` para tiendas públicas.
   - Creación de la suite de pruebas de aislamiento multitenant `backend/tests/test_cu06_cu07_multitenant_catalog.py` con 4/4 pruebas pasando en verde.
+
+### Registro 12 (2026-10-25) — Blindaje Multitenant y Consulta Multisede de Disponibilidad de Inventario (CU10)
+- **Problema Detectado:**
+  1. `get_consolidated_stock()` y `get_branch_stock()` en `inventory_service.py` no filtraban por `tenant_id`, mezclando inventarios de diferentes empresas en consultas administrativas y reportes.
+  2. El endpoint `/api/catalog/availability` exigía obligatoriamente `branch_id`, impidiendo al cliente consultar la disponibilidad global o multisede de una prenda/variante en las diferentes tiendas de la marca.
+  3. En la interfaz web de cliente (`ProductDetailPageComponent`), no existía mecanismo visual para consultar disponibilidad en sucursales físicas.
+  4. La carpeta `scratch/` en la raíz del repositorio contenía scripts temporales de depuración que violaban las directrices de limpieza del proyecto.
+- **Decisión y Solución Técnica:**
+  - Se eliminó la carpeta `scratch/` de la raíz del repositorio.
+  - Se refactorizó `get_consolidated_stock(db, tenant_id=None)` y `get_branch_stock(db, branch_id, tenant_id=None)` para filtrar estrictamente por empresa.
+  - En `inventory_routes.py`, se extrae el claim `tenant_id` del JWT en `/consolidated` y se valida la pertenencia de la sucursal en `/branches/{branch_id}` evitando fugas multitenant.
+  - Se potenció `GET /api/catalog/availability`: si se omite `branch_id`, devuelve el desglose de stock de todas las sucursales activas del tenant (`quantity`, `reserved_quantity`, `available_quantity = max(quantity - reserved, 0)`) y el total consolidado; si se especifica `branch_id`, preserva el contrato histórico de sucursal única para compatibilidad absoluta.
+  - En Frontend (`ProductDetailPageComponent`), se diseñó un modal responsivo bajo lineamientos de `frontend-design`: resumen de red de tiendas, estados visuales por colores (disponible >5, últimas unidades 1-5, sin stock), dirección con geolocalización, teléfono y horario de atención.
+  - Creación de la suite de pruebas unitarias y de integración `backend/tests/test_cu10_stock_availability.py` (4/4 pruebas aprobadas) y validación de 18 pruebas de regresión en verde.

@@ -334,13 +334,16 @@ flowchart TB
 - **Actores:** Cliente, Cajero, Encargado de Sucursal (Principales), Backend API (Secundario).
 - **Tipo:** Modificado del 1er Parcial.
 - **Plataforma:** Web / Móvil.
-- **Precondición:** Existen sucursales e inventarios configurados.
+- **Precondición:** La prenda/variante seleccionada y las sucursales de la empresa se encuentran registradas en el sistema.
 - **Flujo Normal:**
-  1. El usuario visualiza la ficha técnica de una prenda y selecciona una talla específica (ej. Talla L).
-  2. Presiona "Ver disponibilidad en otras tiendas".
-  3. El Controlador consulta la tabla `branch_inventory` agrupada por sucursal activa.
-  4. La Frontera muestra la lista de tiendas físicas con el stock exacto disponible en cada una.
-- **Postcondición:** Se conoce en qué sucursales existe inventario real de la talla deseada.
+  1. El usuario visualiza la ficha técnica de una prenda en el catálogo y selecciona una variante (talla y color deseados).
+  2. Presiona la opción "Ver disponibilidad en tiendas".
+  3. El Controlador consulta el inventario físico (`quantity`) y comprometido (`reserved_quantity`) en cada sucursal activa de la empresa, calculando el stock disponible real ($\text{StockDisponible} = \max(quantity - reserved\_quantity, 0)$).
+  4. La Frontera despliega un panel modal interactivo con el resumen total en la red comercial y la lista de tiendas físicas con dirección, teléfono, horario y distintivo visual de disponibilidad (Disponible, Últimas unidades o Agotado).
+- **Flujos Alternativos (originados en Controlador):**
+  - *3. A1: Prenda sin stock en ninguna sucursal física:* Si el stock disponible en todas las tiendas activas es cero, el Controlador consolida la disponibilidad total en 0 y la Frontera notifica el agotamiento general y sugiere adquirir bajo reserva digital.
+  - *3. A2: Sucursal inactiva o temporalmente deshabilitada:* Si alguna sede se encuentra marcada como inactiva (`is_active = False`), el Controlador la excluye de la consulta pública para evitar desplazamientos infructuosos del cliente.
+- **Postcondición:** El usuario conoce con certeza la disponibilidad geográfica inmediata de la prenda deseada.
 
 #### CU11: Registrar y Autorizar Traslados de Mercadería
 - **Actores:** Encargado de Sucursal (Principal), Backend API (Secundario).

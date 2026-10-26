@@ -15,12 +15,17 @@
    - Frontend Angular 21: [`admin-branch-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-branch-page.component.ts) con widget de consumo de cuotas, coordenadas GPS y modales completos.
 4. **CU03 & CU05 – Autenticación y Perfil Multitenant:**
    - JWT emitido con claims obligatorios `tenant_id`, `rol`, `branch_id`. Endpoints `/api/users/me` verificados (2/2 tests PASSED).
-5. **CU06 & CU07 – Blindaje de Aislamiento Multitenant en Catálogo (NUEVO & CONSOLIDADO):**
-   - **Corrección de Migración Fantasma:** Ejecutado formalmente `alembic upgrade head`, aplicando la revisión `0041` en PostgreSQL (`products.tenant_id`, `product_variants.tenant_id`, `inventory.tenant_id`, tablas `offline_operations` y `catalog_cache`).
-   - **Corrección de Rollback Silencioso:** Inclusión de `db.commit()` en `create_product()`, `update_product()` y `delete_product()` dentro de [`catalog_service.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p2_gestion_productos_catalogo/services/catalog_service.py).
-   - **Enforzamiento de `tenant_id`:** Extracción obligatoria del claim `tenant_id` en [`catalog_routes.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p2_gestion_productos_catalogo/routes/catalog_routes.py), filtrando consultas administrativas `/api/catalog/products/admin` y bloqueando accesos cruzados.
-   - **Precios Diferenciados por Talla:** Matriz de variantes con precio independiente por talla (ej. Talla M a Bs 50 y Talla L a Bs 70), preparando el terreno para el cálculo de $\Delta$ en el cambio de prendas ([CU19](file:///c:/Users/PERSONAL/ecommerce-SI2/docs/BUSINESS_POLICIES.md#L30)).
+5. **CU06 & CU07 – Blindaje de Aislamiento Multitenant en Catálogo:**
+   - **Corrección de Migración Fantasma:** Ejecutado formalmente `alembic upgrade head`, aplicando la revisión `0041` en PostgreSQL.
+   - **Corrección de Rollback Silencioso:** Inclusión de `db.commit()` en `create_product()`, `update_product()` y `delete_product()`.
+   - **Enforzamiento de `tenant_id`:** Extracción obligatoria del claim `tenant_id` en [`catalog_routes.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p2_gestion_productos_catalogo/routes/catalog_routes.py).
    - **Pruebas de Aislamiento:** Suite dedicada [`test_cu06_cu07_multitenant_catalog.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu06_cu07_multitenant_catalog.py) con **4/4 tests PASSED**.
+6. **CU10 – Consultar Disponibilidad de Prendas por Sucursal (NUEVO & CONSOLIDADO):**
+   - **Eliminación de Fugas Multitenant en Inventario:** Filtrado estricto por `tenant_id` en `get_consolidated_stock()` y `get_branch_stock()` en [`inventory_service.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p3_gestion_inventario_disponibilidad/services/inventory_service.py) y validación de propiedad de sucursal en [`inventory_routes.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p3_gestion_inventario_disponibilidad/routes/inventory_routes.py).
+   - **Endpoint Multisede Extendido:** `GET /api/catalog/availability` ahora permite consultar disponibilidad en todas las sucursales activas de una empresa sin requerir forzosamente `branch_id`, calculando stock disponible real ($StockDisponible = \max(quantity - reserved, 0)$) y preservando retrocompatibilidad de sucursal única.
+   - **Frontend UI/UX (`frontend-design`):** En [`product-detail-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/product-detail-page.component.ts) y `.html`, se implementó el modal responsivo de disponibilidad en tiendas físicas con badges semánticos, total de red, datos de contacto y horarios. Compilación validada al 100% con `ng build`.
+   - **Limpieza de Repositorio:** Carpeta `scratch/` removida de la raíz del repositorio.
+   - **Pruebas de Disponibilidad:** Suite dedicada [`test_cu10_stock_availability.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu10_stock_availability.py) con **4/4 tests PASSED** y **18/18 pruebas de regresión PASSED**.
 
 ---
 
@@ -32,18 +37,18 @@
 ---
 
 ### 3. Estado de Servicios y Pruebas
-* **Backend Tests:** **12/12 pruebas unitarias e integración aprobadas al 100%:**
+* **Backend Tests:** **22/22 pruebas unitarias e integración aprobadas al 100%:**
+  - `tests/test_cu10_stock_availability.py`: 4/4 PASSED (Consulta multisede, compatibilidad unitaria, aislamiento de stock por tenant, validación 422).
   - `tests/test_cu06_cu07_multitenant_catalog.py`: 4/4 PASSED (Creación de variantes diferenciadas por talla, aislamiento administrativo, protección contra edición/borrado cruzado, búsqueda facetada por tenant).
-  - `tests/test_auth_cu03.py`: 2/2 PASSED.
-  - `tests/test_cu05_profile.py`: 2/2 PASSED.
+  - `tests/test_business_rules.py`: 10/10 PASSED (Disponibilidad de inventario, stock no negativo, transiciones y descuentos).
   - `tests/test_cu06_cu10_catalog_offline.py`: 4/4 PASSED.
+* **Frontend Web:** Compilación de producción validada exitosamente con `ng build` (0 errores).
 * **Base de Datos:** Migración `0041` efectivamente aplicada en PostgreSQL (`alembic current` reporta `0041`).
 
 ---
 
 ### 4. Próxima Tarea Inmediata
-1. **CU10 (Consultar Disponibilidad de Inventario por Sucursal):**
-   - Asegurar consulta y cálculo de stock físico (`quantity`) vs reservado (`reserved_quantity`) por variante, talla y sucursal.
-   - Eliminar falsos positivos en las pruebas de disponibilidad de inventario.
-2. **Frontend PWA & Mobile (CU08 & CU09):**
-   - Integración de IndexedDB en Angular y SQLite en Flutter consumiendo `/api/catalog/offline-pack`.
+1. **Frontend PWA & Mobile (CU08 & CU09):**
+   - Integración de IndexedDB en Angular (Service Worker) y SQLite en Flutter consumiendo `/api/catalog/offline-pack` para navegación en modo desconectado.
+2. **Presentación 2 (CU11 & CU12):**
+   - CU11 (Traslados de Mercadería entre Sucursales) y CU12 (Pasarela Stripe con despacho condicionado al pago confirmado).

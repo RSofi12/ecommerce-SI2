@@ -18,17 +18,23 @@
 
 ---
 
-### Hito 2: Consulta de Disponibilidad de Inventario por Sucursal (CU10 - TAREA INMEDIATA)
-1. **Backend `p3_gestion_inventario_disponibilidad`:**
-   - [ ] Consolidar endpoint `/api/inventory/consolidated` y `/api/catalog/availability`.
-   - [ ] Asegurar consulta real de `quantity` (stock físico) y `reserved_quantity` (stock reservado) por variante, talla y sucursal.
-   - [ ] Suite de pruebas de disponibilidad real multisede (eliminando el falso positivo de test previo).
+### Hito 2: Consulta de Disponibilidad de Inventario por Sucursal (CU10 - COMPLETADO)
+1. **Backend `p3_gestion_inventario_disponibilidad` y `p2_gestion_productos_catalogo`:**
+   - [x] Consolidar endpoint `/api/inventory/consolidated` y `/api/inventory/branches/{branch_id}` con filtrado estricto por `tenant_id`.
+   - [x] Extender `/api/catalog/availability` para soporte multisede (desglose por sucursales activas del tenant, stock disponible real $StockDisponible = \max(quantity - reserved, 0)$ y total disponible).
+   - [x] Suite de pruebas unitarias e integración en `test_cu10_stock_availability.py` (4/4 PASSED).
+2. **Frontend Web (Angular 21):**
+   - [x] Implementar modal de disponibilidad por sucursales físicas en `ProductDetailPageComponent` bajo lineamientos de `frontend-design`.
+   - [x] Integrar método `getVariantMultiBranchAvailability` en `CatalogApiService`.
+   - [x] Compilación validada con `ng build` (0 errores).
+3. **Limpieza de Repositorio:**
+   - [x] Eliminada carpeta `scratch/` de la raíz del proyecto.
 
 ---
 
-### Hito 3: Persistencia Local y Modo Offline del Catálogo (CU08 & CU09)
+### Hito 3: Persistencia Local y Modo Offline del Catálogo (CU08 & CU09 - TAREA INMEDIATA)
 1. **Frontend PWA (Angular 21):**
-   - [ ] Configurar `@angular/pwa`, Service Worker y Web App Manifest.
+   - [ ] Configurar Service Worker y Web App Manifest.
    - [ ] Crear `src/app/core/offline/idb.service.ts` para consumir `/api/catalog/offline-pack` y almacenar catálogo en IndexedDB.
    - [ ] Banner visual de estado de conectividad con advertencia de datos locales en caché.
 2. **Aplicación Móvil (Flutter / Dart):**
