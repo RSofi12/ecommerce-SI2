@@ -11,21 +11,21 @@ Documento oficial de control de avance de los **28 Casos de Uso** organizados po
   - *Criterio de éxito:* Superadmin da de alta una empresa cliente con Razón Social, NIT y Administrador inicial.
 - [x] **CU02 – Gestionar Planes de Suscripción y Límites Comerciales** [2do Parcial - NUEVO]
   - *Criterio de éxito:* Planes Básico (máx. 2 sucursales) y Profesional (máx. 10 sucursales) configurables.
-- [ ] **CU03 – Autenticar Usuario en Contexto Multitenant** [1er Parcial - MODIFICADO]
+- [x] **CU03 – Autenticar Usuario en Contexto Multitenant** [1er Parcial - MODIFICADO]
   - *Criterio de éxito:* Token JWT inyecta obligatoriamente `tenant_id`, `role` y `branch_id`.
 - [x] **CU04 – Gestionar Sucursales bajo Reglas de Suscripción** [1er Parcial - MODIFICADO]
   - *Criterio de éxito:* El backend rechaza la creación de una 3ra sucursal si la empresa tiene Plan Básico.
-- [ ] **CU05 – Consultar y Actualizar Perfil de Usuario** [1er Parcial - MODIFICADO]
+- [x] **CU05 – Consultar y Actualizar Perfil de Usuario** [1er Parcial - MODIFICADO]
   - *Criterio de éxito:* Edición de datos del cliente/empleado aislada por tenant.
-- [ ] **CU06 – Gestionar Catálogo de Productos y Variantes por Tenant** [1er Parcial - MODIFICADO]
+- [x] **CU06 – Gestionar Catálogo de Productos y Variantes por Tenant** [1er Parcial - MODIFICADO]
   - *Criterio de éxito:* CRUD de prendas y variantes (talla, color, precio diferenciado) restringido a la empresa.
-- [ ] **CU07 – Consultar y Filtrar Catálogo en Línea** [1er Parcial - MODIFICADO]
+- [x] **CU07 – Consultar y Filtrar Catálogo en Línea** [1er Parcial - MODIFICADO]
   - *Criterio de éxito:* Búsqueda multicriterio de prendas de la marca activa.
-- [ ] **CU08 – Descargar y Almacenar Catálogo en Caché Local (IDB/SQLite)** [2do Parcial - NUEVO]
+- [x] **CU08 – Descargar y Almacenar Catálogo en Caché Local (IDB/SQLite)** [2do Parcial - NUEVO]
   - *Criterio de éxito:* Descarga de catálogo a IndexedDB (web) y SQLite (móvil).
-- [ ] **CU09 – Consultar Catálogo y Disponibilidad Local en Modo Offline** [2do Parcial - NUEVO]
+- [x] **CU09 – Consultar Catálogo y Disponibilidad Local en Modo Offline** [2do Parcial - NUEVO]
   - *Criterio de éxito:* Navegación y búsqueda de prendas sin internet con advertencia visual de datos locales.
-- [ ] **CU10 – Consultar Disponibilidad de Prendas por Sucursal** [1er Parcial - MODIFICADO]
+- [x] **CU10 – Consultar Disponibilidad de Prendas por Sucursal** [1er Parcial - MODIFICADO]
   - *Criterio de éxito:* Stock físico y reservado visible por sucursal en tiempo real.
 
 ---

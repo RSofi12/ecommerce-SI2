@@ -12,6 +12,7 @@ class Inventory(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     variant_id = Column(UUID(as_uuid=True), ForeignKey("product_variants.id"), nullable=False, index=True)
     branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True, index=True)
     quantity = Column(Integer, nullable=False, default=0)
     reserved_quantity = Column(Integer, nullable=False, default=0)
     minimum_stock = Column(Integer, nullable=False, default=0)

@@ -24,8 +24,15 @@
    - Desacoplamiento de entorno externo mediante [`frontend/public/runtime-config.js`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/public/runtime-config.js) y detección dinámica de localhost en [`environment.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/environments/environment.ts), eliminando el bloqueo Cloudflare 403.
    - Rediseño del login con conmutador de 2 actores (`Clientes` vs `Administrativos`), botón toggle para mostrar/ocultar contraseña (Lucide icons) y paleta de diseño peach/coral.
    - Autenticación limpia con `rol` opcional en `UserLogin` extrayendo el rol real desde la base de datos.
-5. **Revisión General de Implementación de CU08 (ICONIX):**
-   - Completada la revisión previa oficial bajo las 8 secciones de la cátedra para `CU08: Descargar Catálogo a Base Local (IndexedDB / SQLite)`.
+3. **CU03, CU05, CU06, CU07, CU08, CU09, CU10 (Presentación 1 - Backend Consolidado):**
+   - Migración Alembic `0041`: campos `tenant_id` en `products`, `product_variants` e `inventory`; tablas `offline_operations` y `catalog_cache`.
+   - CU03: Verificado registro, inicio de sesión y emisión de JWT con claims multitenant (`tenant_id`, `rol`, `branch_id`).
+   - CU05: Endpoints `/api/users/me` (consulta y actualización de perfil) verificados con suite pytest.
+   - CU06 & CU07: Modelos y catálogo de productos con filtrado multicriterio (`/api/catalog/products`).
+   - CU08: Endpoint `GET /api/catalog/offline-pack` implementado para empaquetado de catálogo por tenant/sucursal.
+   - CU09: Endpoint `POST /api/catalog/offline-sync` implementado con deduplicación por `client_operation_id`.
+   - CU10: Endpoints `/api/catalog/availability` e `/api/inventory/consolidated` verificados.
+   - Suite completa de 8 tests unitarios pasando al 100% en backend con `pytest`.
 
 ---
 
@@ -36,17 +43,14 @@
 
 ---
 
-### 3. Estado de Servicios Locales
-* **Backend FastAPI (Puerto 8000):** DETENIDO (apagado a solicitud del usuario).
-  - Comando para reiniciar cuando se retome la sesión:
-    ```powershell
-    cd backend; .\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
-    ```
-* **Frontend Angular (Puerto 4200):** Activo en terminal del usuario (`ng serve`).
+### 3. Estado de Servicios y Pruebas
+* **Backend Tests:** 8/8 pruebas unitarias aprobadas (`tests/test_auth_cu03.py`, `tests/test_cu05_profile.py`, `tests/test_cu06_cu10_catalog_offline.py`).
+* **Base de Datos:** Migración `0041` aplicada en PostgreSQL.
 
 ---
 
 ### 4. Próxima Tarea Inmediata (Presentación 1: 25/10/2026)
-* **CU08 – Descargar Catálogo a Base Local (IndexedDB / SQLite):**
-  1. Backend: Implementar endpoint `GET /api/catalog/offline-pack?branch_id={uuid}` con empaquetado optimizado de prendas, variantes de precio por talla y existencias de sucursal.
-  2. Frontend: Implementar `idb.service.ts` en Angular para almacenamiento estructurado en `fashionstore_local_db` (Object Stores: `catalog_products`, `catalog_variants`, `sync_meta`).
+* **Frontend Web (Angular PWA) & Mobile (Flutter):**
+  1. Conectar `idb.service.ts` en Angular para consumir `GET /api/catalog/offline-pack` y guardar en IndexedDB (`catalog_cache`).
+  2. Implementar servicio de persistencia local en SQLite (`sqflite`) en Flutter para modo offline.
+  3. Ejecutar demo completa de los 10 CU en la sesión de presentación.

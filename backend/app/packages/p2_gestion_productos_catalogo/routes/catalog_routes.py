@@ -496,3 +496,105 @@ async def set_inventory(product_id: UUID | None = None, variant_id: UUID | None 
 
     inv = create_or_update_inventory(db, resolved_variant_id, branch_id, quantity)
     return response(status_code=200, message="Inventario actualizado exitosamente", data={"variant_id": inv.variant_id, "branch_id": inv.branch_id, "quantity": inv.quantity})
+
+
+class OfflineBatchSyncRequest(BaseModel):
+    tenant_id: UUID | None = None
+    branch_id: UUID | None = None
+    operations: list[dict]
+
+
+@router.get("/offline-pack")
+async def get_offline_catalog_pack(
+    branch_id: UUID | None = None,
+    tenant_id: UUID | None = None,
+    db: Session = Depends(get_db),
+):
+    from app.models.catalog_cache import CatalogCache
+    from datetime import datetime, timezone
+
+    # 1. Obtener productos activos serializados
+    rows = list_public_products(db, branch_id=branch_id)
+    
+    # Filtrar por tenant si se especifica
+    if tenant_id:
+        # Si las filas tienen tenant_id o productos asociados
+        filtered_rows = [p for p in rows if p.get("tenant_id") is None or str(p.get("tenant_id")) == str(tenant_id)]
+    else:
+        filtered_rows = rows
+
+    pack_data = {
+        "version": 1,
+        "tenant_id": str(tenant_id) if tenant_id else None,
+        "branch_id": str(branch_id) if branch_id else None,
+        "total_products": len(filtered_rows),
+        "products": filtered_rows,
+        "synced_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Guardar o actualizar snapshot en catalog_cache
+    try:
+        cache_entry = CatalogCache(
+            tenant_id=tenant_id,
+            version=1,
+            payload=pack_data,
+        )
+        db.add(cache_entry)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    return response(
+        status_code=200,
+        message="Paquete de catálogo offline descargado exitosamente",
+        data=pack_data,
+    )
+
+
+@router.post("/offline-sync", status_code=status.HTTP_201_CREATED)
+async def sync_offline_operations(
+    payload: OfflineBatchSyncRequest,
+    db: Session = Depends(get_db),
+):
+    from app.models.offline_operation import OfflineOperation
+    from datetime import datetime, timezone
+
+    processed = []
+    skipped = []
+
+    for op in payload.operations:
+        client_op_id = op.get("client_operation_id")
+        op_type = op.get("operation_type", "GENERIC_OFFLINE")
+        op_payload = op.get("payload", {})
+
+        # Validar idempotencia si tiene client_operation_id
+        if client_op_id:
+            existing = db.query(OfflineOperation).filter(OfflineOperation.client_operation_id == client_op_id).first()
+            if existing:
+                skipped.append({"client_operation_id": client_op_id, "reason": "ALREADY_SYNCED"})
+                continue
+
+        record = OfflineOperation(
+            tenant_id=payload.tenant_id,
+            branch_id=payload.branch_id,
+            operation_type=op_type,
+            client_operation_id=client_op_id,
+            payload=op_payload,
+            synced=True,
+            synced_at=datetime.now(timezone.utc),
+        )
+        db.add(record)
+        processed.append(client_op_id or str(record.id))
+
+    db.commit()
+
+    return response(
+        status_code=201,
+        message="Operaciones offline sincronizadas exitosamente",
+        data={
+            "processed_count": len(processed),
+            "skipped_count": len(skipped),
+            "processed": processed,
+            "skipped": skipped,
+        },
+    )

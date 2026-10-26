@@ -46,3 +46,8 @@
 * **Decisión:** Estandarización del nombre del paquete SaaS en español: `p0_saas_plataforma`.
 * **Motivo:** Mantener coherencia idiomática absoluta con el resto de paquetes de dominio del backend (`p1_gestion_usuarios_acceso`, `p2_gestion_productos_catalogo`, etc.).
 * **Impacto:** Creación del paquete `backend/app/packages/p0_saas_plataforma/` conteniendo los modelos `Company`, `Plan`, `Subscription`, esquemas Pydantic v2, servicios de tenant y validación de cuotas (`quota_service.py`), router `p0_router` montado en `backend/main.py`, y dependencia de contexto multitenant en `backend/app/core/tenant_context.py`.
+
+### Registro 10: 2026-10-25
+* **Decisión:** Sincronización e Idempotencia Offline con `offline-pack` y `offline-sync` (CU08/CU09).
+* **Motivo:** Facilitar la descarga del catálogo completo por tenant en un paquete snapshot JSON unificado y garantizar la persistencia de operaciones creadas sin conexión con deduplicación por `client_operation_id`.
+* **Impacto:** Migración `0041_add_tenant_and_offline_tables.py` que incorpora `tenant_id` a `products`, `product_variants` e `inventory`, crea tablas `offline_operations` y `catalog_cache`. Endpoints `GET /api/catalog/offline-pack` y `POST /api/catalog/offline-sync`.

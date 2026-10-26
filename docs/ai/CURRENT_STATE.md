@@ -8,16 +8,22 @@
 * **Progreso Global Consolidado:**
   - `CU01` (Tenants): Backend, base de datos y portal Superadmin operativos.
   - `CU02` (Planes y Suscripciones): Catálogo de planes, auditoría y Downgrade Guard operativos.
+  - `CU03` (Autenticación Multitenant): Token JWT con inyección de `tenant_id`, `rol`, `branch_id`, tests unitarios pasando.
   - `CU04` (Gestionar Sucursales Bajo Límites del Plan): Migración 0040 (geo/auditoría), endpoints `/api/branches/quota`, validación estricta de cuotas (2 vs 10 sucursales), aislamiento multitenant y UI en Angular 21 100% operativos.
+  - `CU05` (Perfil de Usuario): Rutas `/api/users/me` (consulta y actualización de perfil) verificadas y probadas.
+  - `CU06` & `CU07` (Catálogo Multitenant y Filtros): Soporte multitenant con `tenant_id` en `products` y `product_variants`, filtros multicriterio en `/api/catalog/products`.
+  - `CU08` & `CU09` (Catálogo Offline y Sincronización): Migración 0041 con tablas `offline_operations` y `catalog_cache`, endpoints `/api/catalog/offline-pack` y `/api/catalog/offline-sync` con validación de idempotencia por `client_operation_id`.
+  - `CU10` (Disponibilidad por Sucursal): Endpoints `/api/catalog/availability` e `/api/inventory/consolidated` verificados.
 
 ---
 
 ### 2. Estado por Componente Arquitectónico
 
 #### Base de Datos (PostgreSQL 15+)
-* **Migraciones 0038, 0039 y 0040 Aplicadas:**
+* **Migraciones 0038, 0039, 0040 y 0041 Aplicadas:**
   - Tablas `companies`, `plans` y `subscriptions` creadas y enriquecidas con descripciones comerciales y campos de auditoría.
   - Tabla `branches` enriquecida con `address`, `phone`, `opening_hours`, `latitude`, `longitude`, `created_at` y `updated_at`.
+  - Migración 0041: Agregado `tenant_id` en `products`, `product_variants` e `inventory`; creación de tablas `offline_operations` y `catalog_cache`.
 * **Datos Sembrados (`seed_saas.py`):**
   - Planes: `BASICO` (2 sucursales, sin IA, $29/mes) y `PROFESIONAL` (10 sucursales, con IA, $99/mes).
   - Superadmin Global: `superadmin@fashionstore.com`.
