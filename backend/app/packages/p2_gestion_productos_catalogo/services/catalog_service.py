@@ -105,6 +105,7 @@ def create_product(
     payload: ProductCreate,
     provider_id=None,
     status: ProductStatusEnum = ProductStatusEnum.active,
+    tenant_id=None,
 ):
     try:
         normalized_variants = _normalized_variants(payload, status)
@@ -116,6 +117,7 @@ def create_product(
                 name=payload.name,
                 description=payload.description,
                 provider_id=provider_id,
+                tenant_id=tenant_id,
                 category_id=payload.category_id,
                 collection_id=payload.collection_id,
                 discount_type=payload.discount_type.value if payload.discount_type else None,
@@ -128,6 +130,7 @@ def create_product(
             for variant_data in normalized_variants:
                 variant = ProductVariant(
                     product_id=product.id,
+                    tenant_id=tenant_id,
                     sku=variant_data["sku"],
                     price=variant_data["price"],
                     size_id=variant_data["size_id"],
@@ -139,6 +142,7 @@ def create_product(
                 db.add(variant)
                 variants.append(variant)
 
+        db.commit()
         db.refresh(product)
         for variant in variants:
             db.refresh(variant)
@@ -257,8 +261,11 @@ def delete_collection(db: Session, collection_id) -> bool:
     return True
 
 
-def update_product(db: Session, product_id, payload: ProductCreate) -> Product | None:
-    product = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
+def update_product(db: Session, product_id, payload: ProductCreate, tenant_id=None) -> Product | None:
+    query = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id)
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
+    product = query.first()
     if not product:
         return None
 
@@ -288,7 +295,7 @@ def update_product(db: Session, product_id, payload: ProductCreate) -> Product |
                         raise ValueError("La variante no pertenece al producto")
                     submitted_variant_ids.add(variant_id)
                 else:
-                    variant = ProductVariant(product_id=product.id)
+                    variant = ProductVariant(product_id=product.id, tenant_id=product.tenant_id or tenant_id)
                     db.add(variant)
 
                 for field in ("sku", "price", "size_id", "color_id", "image_url", "image_public_id", "status"):
@@ -298,6 +305,7 @@ def update_product(db: Session, product_id, payload: ProductCreate) -> Product |
                 if variant_id not in submitted_variant_ids:
                     variant.status = ProductStatusEnum.inactive
 
+        db.commit()
         return db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
     except (IntegrityError, ValueError):
         db.rollback()
@@ -307,8 +315,11 @@ def update_product(db: Session, product_id, payload: ProductCreate) -> Product |
         raise ValueError("No se pudo actualizar el producto")
 
 
-def delete_product(db: Session, product_id) -> bool:
-    product = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
+def delete_product(db: Session, product_id, tenant_id=None) -> bool:
+    query = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id)
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
+    product = query.first()
     if not product:
         return False
 
@@ -319,6 +330,7 @@ def delete_product(db: Session, product_id) -> bool:
                 db.query(Inventory).filter(Inventory.variant_id.in_(variant_ids)).delete(synchronize_session=False)
                 db.query(ProductVariant).filter(ProductVariant.id.in_(variant_ids)).delete(synchronize_session=False)
             db.delete(product)
+        db.commit()
         return True
     except (IntegrityError, ValueError):
         db.rollback()
@@ -347,6 +359,7 @@ def _product_to_read(product: Product, variants: list[ProductVariant], branch_qu
             {
                 "id": variant.id,
                 "product_id": product.id,
+                "tenant_id": getattr(variant, "tenant_id", None) or getattr(product, "tenant_id", None),
                 "sku": variant.sku,
                 "price": discounted_price(variant.price, product.discount_type, product.discount_value),
                 "original_price": variant.price,
@@ -371,6 +384,7 @@ def _product_to_read(product: Product, variants: list[ProductVariant], branch_qu
     return ProductRead.model_validate(
         {
             "id": product.id,
+            "tenant_id": getattr(product, "tenant_id", None),
             "name": product.name,
             "description": product.description,
             "provider_id": product.provider_id,
@@ -397,8 +411,11 @@ def serialize_product(db: Session, product_id):
     return _product_to_read(product, product.variants)
 
 
-def get_public_product(db: Session, product_id, branch_id=None):
-    product = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
+def get_public_product(db: Session, product_id, branch_id=None, tenant_id=None):
+    query = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id)
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
+    product = query.first()
     if not product:
         return None
 
@@ -428,8 +445,11 @@ def list_public_products(
     season_id=None,
     collection_id=None,
     q=None,
+    tenant_id=None,
 ):
     query = db.query(Product).options(selectinload(Product.variants))
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
     if category_id:
         query = query.filter(Product.category_id == category_id)
     if season_id:
@@ -465,13 +485,11 @@ def list_public_products(
     return result
 
 
-def list_admin_products(db: Session):
-    products = (
-        db.query(Product)
-        .options(selectinload(Product.variants))
-        .order_by(Product.name.asc())
-        .all()
-    )
+def list_admin_products(db: Session, tenant_id=None):
+    query = db.query(Product).options(selectinload(Product.variants))
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
+    products = query.order_by(Product.name.asc()).all()
     provider_ids = {product.provider_id for product in products if product.provider_id}
     availability = {
         (row.provider_id, row.variant_id): row.quantity
@@ -484,20 +502,21 @@ def list_admin_products(db: Session):
     ]
 
 
-def list_product_variants_for_admin(db: Session, product_id):
-    product = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id).first()
+def list_product_variants_for_admin(db: Session, product_id, tenant_id=None):
+    query = db.query(Product).options(selectinload(Product.variants)).filter(Product.id == product_id)
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
+    product = query.first()
     if not product:
         return None
     return product
 
 
-def list_pending_products(db: Session):
-    products = (
-        db.query(Product)
-        .options(selectinload(Product.variants))
-        .order_by(Product.name.asc())
-        .all()
-    )
+def list_pending_products(db: Session, tenant_id=None):
+    query = db.query(Product).options(selectinload(Product.variants))
+    if tenant_id:
+        query = query.filter(Product.tenant_id == tenant_id)
+    products = query.order_by(Product.name.asc()).all()
 
     result = []
     for product in products:

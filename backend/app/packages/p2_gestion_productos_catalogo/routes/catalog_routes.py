@@ -267,22 +267,25 @@ async def list_products(
     color_id: UUID | None = None,
     season_id: UUID | None = None,
     collection_id: UUID | None = None,
+    tenant_id: UUID | None = None,
 ):
-    rows = list_public_products(db, branch_id, category_id, size_id, color_id, season_id, collection_id, q)
+    rows = list_public_products(db, branch_id, category_id, size_id, color_id, season_id, collection_id, q, tenant_id=tenant_id)
     return response(status_code=200, message="Productos obtenidos exitosamente", data=rows)
 
 
 @router.get("/products/admin")
 async def list_admin_products_route(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(RolEnum.administrador)),
+    current_user: dict = Depends(require_roles(RolEnum.administrador)),
 ):
-    return response(status_code=200, message="Productos administrativos obtenidos exitosamente", data=list_admin_products(db))
+    tenant_id = UUID(current_user["tenant_id"]) if current_user.get("tenant_id") else None
+    return response(status_code=200, message="Productos administrativos obtenidos exitosamente", data=list_admin_products(db, tenant_id=tenant_id))
 
 
 @router.get("/products/pending")
-async def list_pending_products(db: Session = Depends(get_db), current_user: User = Depends(require_roles(RolEnum.administrador))):
-    products = list_pending_products_service(db)
+async def list_pending_products(db: Session = Depends(get_db), current_user: dict = Depends(require_roles(RolEnum.administrador))):
+    tenant_id = UUID(current_user["tenant_id"]) if current_user.get("tenant_id") else None
+    products = list_pending_products_service(db, tenant_id=tenant_id)
     return response(status_code=200, message="Productos pendientes obtenidos exitosamente", data=products)
 
 
@@ -309,8 +312,11 @@ async def record_product_view_route(
 @router.post("/products", status_code=status.HTTP_201_CREATED)
 async def create_product_route(payload: ProductCreate, db: Session = Depends(get_db), current_user: dict = Depends(require_roles(RolEnum.administrador))):
     _validate_product_provider_scope(db, payload.provider_id)
+    tenant_id = UUID(current_user["tenant_id"]) if current_user.get("tenant_id") else None
+    if not tenant_id and current_user.get("rol") != RolEnum.superadmin.value:
+        raise HTTPException(status_code=400, detail="El administrador debe estar vinculado a una empresa")
     try:
-        product = create_product(db, payload, provider_id=payload.provider_id, status=ProductStatusEnum.active)
+        product = create_product(db, payload, provider_id=payload.provider_id, status=ProductStatusEnum.active, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     serialized = serialize_product(db, product.id)
@@ -320,8 +326,9 @@ async def create_product_route(payload: ProductCreate, db: Session = Depends(get
 @router.put("/products/{product_id}")
 async def update_product_route(product_id: UUID, payload: ProductCreate, db: Session = Depends(get_db), current_user: dict = Depends(require_roles(RolEnum.administrador))):
     _validate_product_provider_scope(db, payload.provider_id)
+    tenant_id = UUID(current_user["tenant_id"]) if current_user.get("tenant_id") else None
     try:
-        product = update_product(db, product_id, payload)
+        product = update_product(db, product_id, payload, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not product:
@@ -331,9 +338,10 @@ async def update_product_route(product_id: UUID, payload: ProductCreate, db: Ses
 
 
 @router.delete("/products/{product_id}")
-async def delete_product_route(product_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(require_roles(RolEnum.administrador))):
+async def delete_product_route(product_id: UUID, db: Session = Depends(get_db), current_user: dict = Depends(require_roles(RolEnum.administrador))):
+    tenant_id = UUID(current_user["tenant_id"]) if current_user.get("tenant_id") else None
     try:
-        deleted = delete_product(db, product_id)
+        deleted = delete_product(db, product_id, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not deleted:
@@ -513,15 +521,8 @@ async def get_offline_catalog_pack(
     from app.models.catalog_cache import CatalogCache
     from datetime import datetime, timezone
 
-    # 1. Obtener productos activos serializados
-    rows = list_public_products(db, branch_id=branch_id)
-    
-    # Filtrar por tenant si se especifica
-    if tenant_id:
-        # Si las filas tienen tenant_id o productos asociados
-        filtered_rows = [p for p in rows if p.get("tenant_id") is None or str(p.get("tenant_id")) == str(tenant_id)]
-    else:
-        filtered_rows = rows
+    # 1. Obtener productos activos serializados filtrados por tenant
+    filtered_rows = list_public_products(db, branch_id=branch_id, tenant_id=tenant_id)
 
     pack_data = {
         "version": 1,

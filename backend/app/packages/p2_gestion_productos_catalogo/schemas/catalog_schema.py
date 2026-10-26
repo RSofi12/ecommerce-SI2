@@ -71,6 +71,7 @@ class ProductVariantGarmentPointsUpdate(BaseModel):
 class ProductVariantRead(BaseModel):
     id: UUID
     product_id: UUID
+    tenant_id: UUID | None = None
     sku: str
     price: Decimal
     original_price: Decimal | None = None
@@ -91,6 +92,7 @@ class ProductVariantRead(BaseModel):
 
 class ProductRead(BaseModel):
     id: UUID
+    tenant_id: UUID | None = None
     name: str
     description: str | None = None
     discount_type: DiscountTypeEnum | None = None
