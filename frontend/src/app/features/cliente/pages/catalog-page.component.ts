@@ -27,6 +27,8 @@ import {
 import { CatalogApiService } from '../../shared/services/catalog-api.service';
 import { CartApiService } from '../../shared/services/cart-api.service';
 import { SessionService } from '../../shared/services/session.service';
+import { IdbCatalogService, OfflineSyncMeta } from '../../../core/offline/idb-catalog.service';
+import { NetworkStatusService } from '../../../core/offline/network-status.service';
 
 @Component({
   selector: 'app-catalog-page',
@@ -52,6 +54,8 @@ export class CatalogPageComponent {
   private readonly cartApi = inject(CartApiService);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly idb = inject(IdbCatalogService);
+  protected readonly network = inject(NetworkStatusService);
 
   protected readonly branches = signal<CatalogBranch[]>([]);
   protected readonly categories = signal<CatalogNameItem[]>([]);
@@ -65,6 +69,9 @@ export class CatalogPageComponent {
   protected readonly selectedImageByProduct = signal<Record<string, number>>({});
   protected readonly addingToCartByProduct = signal<Record<string, boolean>>({});
   protected readonly loading = signal(false);
+  protected readonly downloadingOffline = signal(false);
+  protected readonly syncMeta = signal<OfflineSyncMeta | null>(null);
+  protected readonly isOfflineActive = signal(false);
   private recommendationsRequestVersion = 0;
 
   protected readonly form = this.fb.nonNullable.group({
@@ -120,9 +127,16 @@ export class CatalogPageComponent {
 
   protected async search(): Promise<void> {
     this.loading.set(true);
+    const value = this.form.getRawValue();
+
+    if (!this.network.effectiveOnline()) {
+      await this.loadFromIndexedDb(value);
+      this.loading.set(false);
+      return;
+    }
+
     try {
-      const value = this.form.getRawValue();
-      const response = await requestWithToast(
+      const response = await firstValueFrom(
         this.api.listProducts({
           q: value.q || undefined,
           branch_id: value.branch_id || undefined,
@@ -132,20 +146,71 @@ export class CatalogPageComponent {
           season_id: value.season_id || undefined,
           collection_id: value.collection_id || undefined,
         }),
-        {
-          loading: 'Consultando catálogo...',
-          success: 'Catálogo actualizado.',
-          error: 'No se pudo consultar el catálogo.',
-        },
       );
       this.products.set(response.data ?? []);
+      this.isOfflineActive.set(false);
       this.ensureSelectedVariants();
       void this.loadRecommendations();
-    } catch {
-      // El toast de error ya se mostró con requestWithToast
+    } catch (error) {
+      toast.info('Sin conexión al servidor. Cargando catálogo desde base local.');
+      await this.loadFromIndexedDb(value);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected async loadFromIndexedDb(filters: { q?: string; category_id?: string; size_id?: string; color_id?: string }): Promise<void> {
+    try {
+      const offlineProducts = await this.idb.getOfflineProducts({
+        q: filters.q || undefined,
+        category_id: filters.category_id || undefined,
+        size_id: filters.size_id || undefined,
+        color_id: filters.color_id || undefined,
+      });
+      this.products.set(offlineProducts);
+      this.isOfflineActive.set(true);
+      this.ensureSelectedVariants();
+      const meta = await this.idb.getSyncMeta();
+      this.syncMeta.set(meta);
+    } catch {
+      toast.error('No se pudo acceder a la base local IndexedDB.');
+    }
+  }
+
+  protected async downloadOfflineCatalog(): Promise<void> {
+    if (!this.network.effectiveOnline()) {
+      toast.warning('Necesitas conexión a internet para descargar el paquete de catálogo.');
+      return;
+    }
+
+    this.downloadingOffline.set(true);
+    try {
+      const branchId = this.form.controls.branch_id.value || undefined;
+      const resp = await firstValueFrom(this.api.getOfflineCatalogPack(branchId));
+      if (resp.data) {
+        await this.idb.saveOfflinePack(resp.data);
+        const meta = await this.idb.getSyncMeta();
+        this.syncMeta.set(meta);
+        toast.success(`Catálogo local descargado (${resp.data.total_products} prendas disponibles sin conexión).`);
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'No se pudo descargar el paquete offline.'));
+    } finally {
+      this.downloadingOffline.set(false);
+    }
+  }
+
+  protected resetFilters(): void {
+    this.form.reset({
+      q: '',
+      branch_id: '',
+      category_id: '',
+      size_id: '',
+      color_id: '',
+      season_id: '',
+      collection_id: '',
+    });
+    void this.search();
   }
 
   protected async updateBranchAvailability(): Promise<void> {
@@ -176,6 +241,18 @@ export class CatalogPageComponent {
 
   private async loadData(): Promise<void> {
     try {
+      const meta = await this.idb.getSyncMeta();
+      this.syncMeta.set(meta);
+    } catch {
+      // Ignorar fallo de lectura idb inicial
+    }
+
+    if (!this.network.effectiveOnline()) {
+      await this.loadFromIndexedDb(this.form.getRawValue());
+      return;
+    }
+
+    try {
       const [branches, categories, sizes, colors, seasons, collections, products] =
         await Promise.all([
           firstValueFrom(this.api.listPublicBranches()),
@@ -193,10 +270,12 @@ export class CatalogPageComponent {
       this.seasons.set(seasons.data ?? []);
       this.collections.set(collections.data ?? []);
       this.products.set(products.data ?? []);
+      this.isOfflineActive.set(false);
       this.ensureSelectedVariants();
       void this.loadRecommendations();
     } catch (error) {
-      toast.error(getErrorMessage(error, 'No se pudo cargar el catálogo.'));
+      console.warn('Error cargando catálogo online, intentando fallback a IndexedDB', error);
+      await this.loadFromIndexedDb(this.form.getRawValue());
     }
   }
 

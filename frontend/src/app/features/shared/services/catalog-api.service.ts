@@ -241,4 +241,19 @@ export class CatalogApiService {
   deleteVariantImage(variantId: string) {
     return this.api.delete<ApiResponse<CatalogProduct>>(`/catalog/variants/${variantId}/image`);
   }
+
+  getOfflineCatalogPack(branchId?: string, tenantId?: string) {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branch_id', branchId);
+    if (tenantId) params.append('tenant_id', tenantId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.api.get<ApiResponse<{
+      version: number;
+      tenant_id: string | null;
+      branch_id: string | null;
+      total_products: number;
+      products: CatalogProduct[];
+      synced_at: string;
+    }>>(`/catalog/offline-pack${queryString}`);
+  }
 }
