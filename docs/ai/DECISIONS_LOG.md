@@ -51,3 +51,16 @@
 * **Decisión:** Sincronización e Idempotencia Offline con `offline-pack` y `offline-sync` (CU08/CU09).
 * **Motivo:** Facilitar la descarga del catálogo completo por tenant en un paquete snapshot JSON unificado y garantizar la persistencia de operaciones creadas sin conexión con deduplicación por `client_operation_id`.
 * **Impacto:** Migración `0041_add_tenant_and_offline_tables.py` que incorpora `tenant_id` a `products`, `product_variants` e `inventory`, crea tablas `offline_operations` y `catalog_cache`. Endpoints `GET /api/catalog/offline-pack` y `POST /api/catalog/offline-sync`.
+
+
+### Registro 11: 2026-10-25
+* **Decisión:** Enforzamiento estricto de `tenant_id` y persistencia transaccional con `db.commit()` en el Catálogo Multitenant (CU06 / CU07).
+* **Motivo:** Auditoría de arquitectura detectó dos fallas críticas en el commit anterior: (1) Ausencia de aislamiento en endpoints de catálogo, pues `create_product`, `update_product`, `delete_product` y `list_admin_products` no recibían ni filtraban por `tenant_id`, provocando fuga cruzada de datos entre empresas. (2) Ausencia de `db.commit()` en las funciones de `catalog_service.py` (usaban `with db.begin_nested():` sin consolidar), provocando que las prendas creadas se revirtieran silenciosamente en cada petición HTTP. Adicionalmente, la migración `0041` no se había ejecutado en PostgreSQL.
+* **Impacto:**
+  - Ejecución formal de `alembic upgrade head` (revisión 0041 aplicada en base de datos).
+  - Inyección y extracción mandatoria de `tenant_id` desde el JWT verificado en `catalog_routes.py`.
+  - Soporte de precios diferenciados por talla en `ProductVariant` asociados al tenant.
+  - Inclusión de `db.commit()` en `create_product()`, `update_product()` y `delete_product()`.
+  - Serialización de `tenant_id` en `ProductRead` y `ProductVariantRead`.
+  - Filtro opcional por `tenant_id` en `GET /api/catalog/products` para tiendas públicas.
+  - Creación de la suite de pruebas de aislamiento multitenant `backend/tests/test_cu06_cu07_multitenant_catalog.py` con 4/4 pruebas pasando en verde.

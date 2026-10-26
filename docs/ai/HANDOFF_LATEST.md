@@ -1,6 +1,6 @@
 # HANDOFF LATEST — FASHIONSTORE SAAS MULTITENANT
 
-## Estado de Relevo Operativo al 25/10/2026
+## Estado de Relevo Operativo al 25/10/2026 (Post-Blindaje CU06 y CU07)
 
 ### 1. Avances Consolidados en esta Sesión
 1. **CU01 – Registrar y Gestionar Empresas (Tenants):**
@@ -9,30 +9,18 @@
 2. **CU02 – Gestionar Planes de Suscripción y Límites Comerciales:**
    - Migración Alembic `0039` con descripciones comerciales y timestamps.
    - Endpoints `/api/saas/plans` y `/api/saas/subscriptions` con regla *Downgrade Guard*.
-   - Frontend Web: [`subscription-modal.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/superadmin/components/subscription-modal.component.ts) integrado en `/app/superadmin/tenants` (botón "Gestionar Plan").
+   - Frontend Web: [`subscription-modal.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/superadmin/components/subscription-modal.component.ts) integrado en `/app/superadmin/tenants`.
 3. **CU04 – Gestionar Sucursales Bajo Límites del Plan:**
-   - Migración Alembic `0040`: campos `address`, `phone`, `opening_hours`, `latitude`, `longitude` y auditoría en `branches`.
-   - Backend `p1_gestion_usuarios_acceso`:
-     - Servicio `branch_service.py` con `get_branch_quota()` y `validate_branch_quota()`.
-     - Endpoints `/api/branches/quota`, `/api/branches/` con aislamiento estricto por `tenant_id`.
-     - Bloqueo de creación o reactivación que exceda el límite del plan (HTTP 400).
-   - Frontend Web Angular 21:
-     - [`admin-branch.model.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/models/admin-branch.model.ts) y [`admin-branch.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/services/admin-branch.service.ts) con soporte para `BranchQuota`.
-     - [`admin-branch-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-branch-page.component.ts) y template con widget visual de consumo de cuotas del plan, alerta de saturación de capacidad, coordenadas GPS y modal extendido.
-   - Tests de regresión y validación ejecutados exitosamente (`scratch/test_cu04_quota_enforcement.py`).
-4. **Resolución de Autenticación Multitenant y Rediseño de Login:**
-   - Desacoplamiento de entorno externo mediante [`frontend/public/runtime-config.js`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/public/runtime-config.js) y detección dinámica de localhost en [`environment.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/environments/environment.ts), eliminando el bloqueo Cloudflare 403.
-   - Rediseño del login con conmutador de 2 actores (`Clientes` vs `Administrativos`), botón toggle para mostrar/ocultar contraseña (Lucide icons) y paleta de diseño peach/coral.
-   - Autenticación limpia con `rol` opcional en `UserLogin` extrayendo el rol real desde la base de datos.
-3. **CU03, CU05, CU06, CU07, CU08, CU09, CU10 (Presentación 1 - Backend Consolidado):**
-   - Migración Alembic `0041`: campos `tenant_id` en `products`, `product_variants` e `inventory`; tablas `offline_operations` y `catalog_cache`.
-   - CU03: Verificado registro, inicio de sesión y emisión de JWT con claims multitenant (`tenant_id`, `rol`, `branch_id`).
-   - CU05: Endpoints `/api/users/me` (consulta y actualización de perfil) verificados con suite pytest.
-   - CU06 & CU07: Modelos y catálogo de productos con filtrado multicriterio (`/api/catalog/products`).
-   - CU08: Endpoint `GET /api/catalog/offline-pack` implementado para empaquetado de catálogo por tenant/sucursal.
-   - CU09: Endpoint `POST /api/catalog/offline-sync` implementado con deduplicación por `client_operation_id`.
-   - CU10: Endpoints `/api/catalog/availability` e `/api/inventory/consolidated` verificados.
-   - Suite completa de 8 tests unitarios pasando al 100% en backend con `pytest`.
+   - Endpoints `/api/branches/quota`, `/api/branches/` con aislamiento estricto por `tenant_id`. Bloqueo HTTP 400 por límite de cuota.
+   - Frontend Angular 21: [`admin-branch-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-branch-page.component.ts) con widget de consumo de cuotas, coordenadas GPS y modales completos.
+4. **CU03 & CU05 – Autenticación y Perfil Multitenant:**
+   - JWT emitido con claims obligatorios `tenant_id`, `rol`, `branch_id`. Endpoints `/api/users/me` verificados (2/2 tests PASSED).
+5. **CU06 & CU07 – Blindaje de Aislamiento Multitenant en Catálogo (NUEVO & CONSOLIDADO):**
+   - **Corrección de Migración Fantasma:** Ejecutado formalmente `alembic upgrade head`, aplicando la revisión `0041` en PostgreSQL (`products.tenant_id`, `product_variants.tenant_id`, `inventory.tenant_id`, tablas `offline_operations` y `catalog_cache`).
+   - **Corrección de Rollback Silencioso:** Inclusión de `db.commit()` en `create_product()`, `update_product()` y `delete_product()` dentro de [`catalog_service.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p2_gestion_productos_catalogo/services/catalog_service.py).
+   - **Enforzamiento de `tenant_id`:** Extracción obligatoria del claim `tenant_id` en [`catalog_routes.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p2_gestion_productos_catalogo/routes/catalog_routes.py), filtrando consultas administrativas `/api/catalog/products/admin` y bloqueando accesos cruzados.
+   - **Precios Diferenciados por Talla:** Matriz de variantes con precio independiente por talla (ej. Talla M a Bs 50 y Talla L a Bs 70), preparando el terreno para el cálculo de $\Delta$ en el cambio de prendas ([CU19](file:///c:/Users/PERSONAL/ecommerce-SI2/docs/BUSINESS_POLICIES.md#L30)).
+   - **Pruebas de Aislamiento:** Suite dedicada [`test_cu06_cu07_multitenant_catalog.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu06_cu07_multitenant_catalog.py) con **4/4 tests PASSED**.
 
 ---
 
@@ -44,13 +32,18 @@
 ---
 
 ### 3. Estado de Servicios y Pruebas
-* **Backend Tests:** 8/8 pruebas unitarias aprobadas (`tests/test_auth_cu03.py`, `tests/test_cu05_profile.py`, `tests/test_cu06_cu10_catalog_offline.py`).
-* **Base de Datos:** Migración `0041` aplicada en PostgreSQL.
+* **Backend Tests:** **12/12 pruebas unitarias e integración aprobadas al 100%:**
+  - `tests/test_cu06_cu07_multitenant_catalog.py`: 4/4 PASSED (Creación de variantes diferenciadas por talla, aislamiento administrativo, protección contra edición/borrado cruzado, búsqueda facetada por tenant).
+  - `tests/test_auth_cu03.py`: 2/2 PASSED.
+  - `tests/test_cu05_profile.py`: 2/2 PASSED.
+  - `tests/test_cu06_cu10_catalog_offline.py`: 4/4 PASSED.
+* **Base de Datos:** Migración `0041` efectivamente aplicada en PostgreSQL (`alembic current` reporta `0041`).
 
 ---
 
-### 4. Próxima Tarea Inmediata (Presentación 1: 25/10/2026)
-* **Frontend Web (Angular PWA) & Mobile (Flutter):**
-  1. Conectar `idb.service.ts` en Angular para consumir `GET /api/catalog/offline-pack` y guardar en IndexedDB (`catalog_cache`).
-  2. Implementar servicio de persistencia local en SQLite (`sqflite`) en Flutter para modo offline.
-  3. Ejecutar demo completa de los 10 CU en la sesión de presentación.
+### 4. Próxima Tarea Inmediata
+1. **CU10 (Consultar Disponibilidad de Inventario por Sucursal):**
+   - Asegurar consulta y cálculo de stock físico (`quantity`) vs reservado (`reserved_quantity`) por variante, talla y sucursal.
+   - Eliminar falsos positivos en las pruebas de disponibilidad de inventario.
+2. **Frontend PWA & Mobile (CU08 & CU09):**
+   - Integración de IndexedDB en Angular y SQLite en Flutter consumiendo `/api/catalog/offline-pack`.
