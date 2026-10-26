@@ -46,8 +46,9 @@ services:
       alembic upgrade head
       python -m seed
 
-  - type: static
+  - type: web
     name: fashionstore-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist/frontend/browser
