@@ -11,6 +11,15 @@ from app.packages.p3_gestion_inventario_disponibilidad.schemas.replenishment_sch
     ReplenishmentStatusEnum,
     ReplenishmentStatusUpdate,
 )
+from app.packages.p3_gestion_inventario_disponibilidad.schemas.transfer_schema import (
+    InventoryTransferCancel,
+    InventoryTransferCreate as InventoryTransferOrderCreate,
+    InventoryTransferItemRead,
+    InventoryTransferRead,
+    InventoryTransferReceive,
+    TransferItemCreate,
+    TransferStatusEnum,
+)
 
 __all__ = [
     "InventoryMovementCreate",
@@ -22,4 +31,11 @@ __all__ = [
     "ReplenishmentRequestCreate",
     "ReplenishmentStatusEnum",
     "ReplenishmentStatusUpdate",
+    "InventoryTransferCancel",
+    "InventoryTransferOrderCreate",
+    "InventoryTransferItemRead",
+    "InventoryTransferRead",
+    "InventoryTransferReceive",
+    "TransferItemCreate",
+    "TransferStatusEnum",
 ]

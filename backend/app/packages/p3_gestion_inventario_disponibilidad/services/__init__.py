@@ -15,6 +15,13 @@ from app.packages.p3_gestion_inventario_disponibilidad.services.replenishment_se
     transition_request,
     validate_transition,
 )
+from app.packages.p3_gestion_inventario_disponibilidad.services.transfer_service import (
+    cancel_transfer,
+    create_and_dispatch_transfer,
+    get_transfer_detail,
+    list_transfers,
+    receive_transfer,
+)
 
 __all__ = [
     "get_branch_stock",
@@ -30,4 +37,9 @@ __all__ = [
     "serialize_requests",
     "transition_request",
     "validate_transition",
+    "cancel_transfer",
+    "create_and_dispatch_transfer",
+    "get_transfer_detail",
+    "list_transfers",
+    "receive_transfer",
 ]
