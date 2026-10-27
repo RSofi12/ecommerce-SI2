@@ -117,6 +117,12 @@ export const routes: Routes = [
           import('./features/admin/pages/admin-inventory-page.component').then((m) => m.AdminInventoryPageComponent),
       },
       {
+        path: 'encargado/transfers',
+        canActivate: [roleGuard(['encargado'])],
+        loadComponent: () =>
+          import('./features/encargado/pages/transfers-page.component').then((m) => m.TransfersPageComponent),
+      },
+      {
         path: 'encargado/orders',
         canActivate: [roleGuard(['encargado'])],
         loadComponent: () => import('./features/encargado/pages/orders-page.component').then((m) => m.EncargadoOrdersPageComponent),
@@ -197,6 +203,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/admin/pages/admin-inventory-page.component').then(
                 (m) => m.AdminInventoryPageComponent,
+              ),
+          },
+          {
+            path: 'transfers',
+            loadComponent: () =>
+              import('./features/encargado/pages/transfers-page.component').then(
+                (m) => m.TransfersPageComponent,
               ),
           },
           {

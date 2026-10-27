@@ -1,0 +1,379 @@
+<section class="space-y-6">
+  <!-- Encabezado de Página -->
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Traslados de Mercadería</h1>
+      <p class="text-sm text-slate-500">
+        Control de despachos entre tiendas, stock en tránsito y actas de recepción (CU11).
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button hlmBtn variant="outline" type="button" (click)="loadData()" [disabled]="loading()">
+        {{ loading() ? 'Cargando...' : 'Actualizar' }}
+      </button>
+      <button hlmBtn type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm" (click)="openCreateModal()">
+        + Nuevo Traslado
+      </button>
+    </div>
+  </header>
+
+  <!-- Métricas Rápidas (KPIs) -->
+  <section class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <article hlmCard class="bg-white border-slate-200 shadow-sm p-4 rounded-xl">
+      <p class="text-xs uppercase tracking-wider font-semibold text-amber-700">En Tránsito</p>
+      <p class="mt-2 text-3xl font-bold text-amber-600">{{ inTransitCount() }}</p>
+      <p class="mt-1 text-xs text-slate-500">Mercadería en carretera</p>
+    </article>
+
+    <article hlmCard class="bg-white border-slate-200 shadow-sm p-4 rounded-xl">
+      <p class="text-xs uppercase tracking-wider font-semibold text-blue-700">Por Recibir</p>
+      <p class="mt-2 text-3xl font-bold text-blue-600">{{ pendingToReceiveCount() }}</p>
+      <p class="mt-1 text-xs text-slate-500">Envíos dirigidos a tu tienda</p>
+    </article>
+
+    <article hlmCard class="bg-white border-slate-200 shadow-sm p-4 rounded-xl">
+      <p class="text-xs uppercase tracking-wider font-semibold text-emerald-700">Completados</p>
+      <p class="mt-2 text-3xl font-bold text-emerald-600">{{ completedCount() }}</p>
+      <p class="mt-1 text-xs text-slate-500">Recepcionados exitosamente</p>
+    </article>
+
+    <article hlmCard class="bg-white border-slate-200 shadow-sm p-4 rounded-xl">
+      <p class="text-xs uppercase tracking-wider font-semibold text-slate-700">Total Histórico</p>
+      <p class="mt-2 text-3xl font-bold text-slate-900">{{ transfers().length }}</p>
+      <p class="mt-1 text-xs text-slate-500">Operaciones registradas</p>
+    </article>
+  </section>
+
+  <!-- Barra de Filtros y Tabs -->
+  <section class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-3">
+    <!-- Tabs: Todos / Salientes / Entrantes -->
+    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
+      <button
+        type="button"
+        class="px-4 py-1.5 text-xs font-semibold rounded-md transition-colors"
+        [ngClass]="filterTab() === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+        (click)="filterTab.set('all')">
+        Todos ({{ transfers().length }})
+      </button>
+      <button
+        type="button"
+        class="px-4 py-1.5 text-xs font-semibold rounded-md transition-colors"
+        [ngClass]="filterTab() === 'outgoing' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+        (click)="filterTab.set('outgoing')">
+        Salientes (Despachados)
+      </button>
+      <button
+        type="button"
+        class="px-4 py-1.5 text-xs font-semibold rounded-md transition-colors"
+        [ngClass]="filterTab() === 'incoming' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+        (click)="filterTab.set('incoming')">
+        Entrantes (Por Recibir)
+      </button>
+    </div>
+
+    <!-- Filtro de estado -->
+    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+      <span class="text-xs font-medium text-slate-500">Estado:</span>
+      <select
+        class="h-8 rounded-md border border-slate-300 bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event)">
+        <option value="ALL">Todos los estados</option>
+        <option value="EN_TRANSITO">Solo En Tránsito</option>
+        <option value="COMPLETADO">Solo Completados</option>
+        <option value="CANCELADO">Solo Cancelados</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Tabla de Traslados -->
+  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+          <tr>
+            <th class="px-4 py-3">Código</th>
+            <th class="px-4 py-3">Ruta (Origen &rarr; Destino)</th>
+            <th class="px-4 py-3">Prendas y Unidades</th>
+            <th class="px-4 py-3">Solicitante</th>
+            <th class="px-4 py-3">Fecha</th>
+            <th class="px-4 py-3">Estado</th>
+            <th class="px-4 py-3 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (t of filteredTransfers(); track t.id) {
+            <tr class="hover:bg-slate-50/80 transition-colors">
+              <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">
+                {{ t.transfer_number }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-1.5 text-xs font-medium">
+                  <span class="text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{{ t.from_branch_name || 'Origen' }}</span>
+                  <span class="text-slate-400">&rarr;</span>
+                  <span class="text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded font-semibold">{{ t.to_branch_name || 'Destino' }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <div class="space-y-1">
+                  @for (item of t.items; track item.id) {
+                    <div class="text-xs">
+                      <span class="font-semibold text-slate-800">{{ item.product_name }}</span>
+                      <span class="text-slate-500 ml-1">({{ item.variant_sku }})</span>
+                      <span class="inline-block ml-2 px-1.5 py-0.2 bg-slate-100 rounded text-slate-700 font-bold">
+                        x{{ item.quantity }} uds
+                      </span>
+                    </div>
+                  }
+                </div>
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-600">
+                {{ t.requested_by_name || 'Encargado' }}
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                {{ t.requested_at | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                  [ngClass]="statusClass(t.status)">
+                  {{ statusLabel(t.status) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  @if (canReceive(t)) {
+                    <button
+                      hlmBtn
+                      type="button"
+                      class="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-sm"
+                      (click)="openReceiveModal(t)">
+                      Confirmar Recepción
+                    </button>
+                  }
+                  @if (canCancel(t)) {
+                    <button
+                      hlmBtn
+                      type="button"
+                      variant="outline"
+                      class="h-7 px-2 text-xs text-rose-600 hover:bg-rose-50 border-rose-200 rounded-md"
+                      (click)="openCancelModal(t)">
+                      Cancelar
+                    </button>
+                  }
+                  @if (t.status === 'COMPLETADO') {
+                    <span class="text-xs text-emerald-600 font-medium">Recepción verificada</span>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="px-4 py-8 text-center text-slate-400">
+                No se encontraron traslados con los filtros seleccionados.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- MODAL: Nuevo Traslado de Mercadería -->
+  @if (createModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" (click)="closeCreateModal()">
+      <div
+        class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200"
+        (click)="$event.stopPropagation()">
+        <header class="border-b border-slate-100 pb-3 mb-4">
+          <h2 class="text-lg font-bold text-slate-900">Nuevo Traslado de Mercadería</h2>
+          <p class="text-xs text-slate-500">Despacha prendas desde tu sucursal hacia otra tienda de la cadena.</p>
+        </header>
+
+        <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="space-y-4">
+          <!-- Sucursal de Origen -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Sucursal Origen (Emisora)</label>
+            @if (isAdmin()) {
+              <select
+                formControlName="from_branch_id"
+                (change)="onFromBranchChange()"
+                class="w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @for (b of branches(); track b.id) {
+                  <option [value]="b.id">{{ b.name }} ({{ b.city }})</option>
+                }
+              </select>
+            } @else {
+              <div class="h-9 px-3 py-1.5 rounded-md border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700">
+                {{ user()?.branch_id ? (branches() | slice:0:1)[0]?.name || 'Tu Sucursal Asignada' : 'Tu Sucursal' }}
+              </div>
+            }
+          </div>
+
+          <!-- Sucursal de Destino -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Sucursal Destino (Receptora)</label>
+            <select
+              formControlName="to_branch_id"
+              class="w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="" disabled>Selecciona sucursal destino</option>
+              @for (b of branches(); track b.id) {
+                @if (b.id !== createForm.get('from_branch_id')?.value) {
+                  <option [value]="b.id">{{ b.name }} ({{ b.city }})</option>
+                }
+              }
+            </select>
+          </div>
+
+          <!-- Prenda / Variante -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Prenda / Variante a Trasladar</label>
+            <select
+              formControlName="variant_id"
+              class="w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="" disabled>Selecciona una prenda con stock</option>
+              @for (item of branchStock(); track item.variant_id) {
+                <option [value]="item.variant_id">
+                  {{ item.product_name }} - SKU: {{ item.variant_sku }} (Disponible: {{ item.available_quantity }})
+                </option>
+              }
+            </select>
+            @if (selectedVariantStock() !== null) {
+              <p class="mt-1 text-xs font-medium text-emerald-600">
+                Stock disponible en origen: <strong>{{ selectedVariantStock() }} unidades</strong>
+              </p>
+            }
+          </div>
+
+          <!-- Cantidad a Transferir -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Cantidad a Enviar</label>
+            <input
+              type="number"
+              min="1"
+              [max]="selectedVariantStock() ?? 9999"
+              formControlName="quantity"
+              class="w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <!-- Notas u Observaciones -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Motivo / Notas de Envío</label>
+            <textarea
+              formControlName="notes"
+              rows="2"
+              placeholder="Ej: Reposición urgente fin de semana por alta demanda..."
+              class="w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+
+          <!-- Botones de Acción -->
+          <footer class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <button hlmBtn type="button" variant="outline" (click)="closeCreateModal()" [disabled]="submitting()">
+              Cancelar
+            </button>
+            <button
+              hlmBtn
+              type="submit"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+              [disabled]="submitting() || createForm.invalid">
+              {{ submitting() ? 'Despachando...' : 'Despachar Traslado' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: Confirmar Recepción -->
+  @if (receiveModalOpen() && selectedTransfer()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" (click)="closeReceiveModal()">
+      <div
+        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200"
+        (click)="$event.stopPropagation()">
+        <header class="border-b border-slate-100 pb-3 mb-4">
+          <h2 class="text-lg font-bold text-slate-900">Recepción de Mercadería</h2>
+          <p class="text-xs text-slate-500">
+            Traslado <strong class="text-slate-800">{{ selectedTransfer()?.transfer_number }}</strong>
+          </p>
+        </header>
+
+        <div class="space-y-3 mb-5">
+          <p class="text-xs text-slate-600">
+            Confirma que la mercadería llegó físicamente a tu sucursal. Al aceptar, las siguientes prendas se incorporarán inmediatamente al inventario local disponible:
+          </p>
+
+          <div class="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-2">
+            @for (item of selectedTransfer()?.items; track item.id) {
+              <div class="flex items-center justify-between text-xs">
+                <div>
+                  <span class="font-semibold text-slate-800">{{ item.product_name }}</span>
+                  <span class="text-slate-500 ml-1">({{ item.variant_sku }})</span>
+                </div>
+                <span class="font-bold text-indigo-700">+{{ item.quantity }} unidades</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <footer class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button hlmBtn type="button" variant="outline" (click)="closeReceiveModal()" [disabled]="submitting()">
+            Cancelar
+          </button>
+          <button
+            hlmBtn
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            (click)="submitReceive()"
+            [disabled]="submitting()">
+            {{ submitting() ? 'Recepcionando...' : 'Confirmar e Ingresar a Stock' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: Cancelar Traslado -->
+  @if (cancelModalOpen() && selectedTransfer()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" (click)="closeCancelModal()">
+      <div
+        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200"
+        (click)="$event.stopPropagation()">
+        <header class="border-b border-slate-100 pb-3 mb-4">
+          <h2 class="text-lg font-bold text-rose-700">Cancelar Traslado</h2>
+          <p class="text-xs text-slate-500">
+            Orden <strong class="text-slate-800">{{ selectedTransfer()?.transfer_number }}</strong>
+          </p>
+        </header>
+
+        <div class="space-y-3 mb-5">
+          <p class="text-xs text-slate-600">
+            ¿Estás seguro de cancelar esta orden de traslado? Las prendas en tránsito se <strong>restituirán automáticamente</strong> al stock disponible de la sucursal de origen.
+          </p>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Motivo de la cancelación</label>
+            <input
+              type="text"
+              [(ngModel)]="cancelReason"
+              class="w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+        </div>
+
+        <footer class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button hlmBtn type="button" variant="outline" (click)="closeCancelModal()" [disabled]="submitting()">
+            Volver
+          </button>
+          <button
+            hlmBtn
+            type="button"
+            class="bg-rose-600 hover:bg-rose-700 text-white font-medium"
+            (click)="submitCancel()"
+            [disabled]="submitting()">
+            {{ submitting() ? 'Cancelando...' : 'Confirmar Cancelación' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+</section>
