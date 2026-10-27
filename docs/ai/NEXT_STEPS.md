@@ -44,10 +44,19 @@
 
 ---
 
-### Hito 4: Presentación 2 — Traslados Multisede y Pagos con Stripe (CU11 & CU12 - TAREA INMEDIATA)
-1. **CU11: Registrar y Autorizar Traslados de Mercadería:**
-   - [ ] Endpoints en `p3_gestion_inventario_disponibilidad` para creación de orden de traslado, validación de stock en origen, estado `EN_TRANSITO` y confirmación de recepción con estado `COMPLETADO`.
-   - [ ] Pantalla y flujos en Frontend Web para encargados de sucursal.
+### Hito 4: Presentación 2 — Traslados Multisede y Pagos con Stripe (CU11 COMPLETADO & CU12 TAREA INMEDIATA)
+1. **CU11: Registrar y Autorizar Traslados de Mercadería (COMPLETADO):**
+   - [x] Migración Alembic `0042_add_inventory_transfers.py` con tablas `inventory_transfers` e `inventory_transfer_items`.
+   - [x] Endpoints en `p3_gestion_inventario_disponibilidad` (`POST /api/inventory/transfers`, `GET /api/inventory/transfers`, `POST /api/inventory/transfers/{id}/receive`, `POST /api/inventory/transfers/{id}/cancel`).
+   - [x] Reglas de negocio sagradas: descuento preventivo en origen al despachar (`EN_TRANSITO`), retención en carretera sin tocar destino, acreditación al confirmar recepción (`COMPLETADO`) y restitución a origen al anular (`CANCELADO`).
+   - [x] Suite de pruebas automatizadas en `backend/tests/test_cu11_inventory_transfers.py` (5/5 PASSED).
+   - [x] Frontend Web en Angular 21: [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) y template HTML con KPIs, tabs Salientes/Entrantes, filtros de estado, modales reactivos de despacho, recepción y cancelación.
+   - [x] Rutas `/app/encargado/transfers` y `/app/admin/transfers` configuradas en `app.routes.ts` y menú lateral de `app-shell.component.ts`.
+
+2. **CU12: Comprar Prendas con Stripe y Despacho Condicionado (TAREA INMEDIATA):**
+   - [ ] Paquete `p4_gestion_compras_reservas` y `p5_gestion_ventas_pos`: Checkout con Stripe Elements / PaymentIntent.
+   - [ ] Regla de negocio sagrada: Despacho / entrega digital condicionado estrictamente al estado `status = 'paid'`.
+   - [ ] Webhook de Stripe y actualización transaccional de órdenes de compra.
 2. **CU12: Comprar Prendas con Pasarela Stripe y Despacho Condicionado:**
    - [ ] Integración con Stripe API (`PaymentIntent` y webhooks `payment_intent.succeeded`).
    - [ ] **Política Inviolable:** Generación de orden de despacho logístico condicionada estrictamente a la confirmación de pago (`status = 'paid'`).

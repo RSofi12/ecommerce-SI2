@@ -91,3 +91,13 @@
   - Se añadió botón explícito para descargar/refrescar el catálogo local (CU08) con badge dinámico de conteo de prendas en caché.
   - En `AdminCatalogPageComponent` (CU06), se refinó la interfaz con la skill `frontend-design`: numeración clara de variantes (`#1`, `#2`), contenedor sutil con borde definido, textos de ayuda conceptuales para el precio por talla y acciones de eliminación fluidas.
   - Formato estricto ICONIX en flujos alternativos referenciando puntos del flujo principal (`2. A1:`, `4. A2:`, etc.).
+
+
+### Registro 12: 2026-10-26
+* **Decisión:** Implementación formal del ciclo de vida de **Traslados de Mercadería entre Sucursales (CU11)** con estados `EN_TRANSITO`, `COMPLETADO` y `CANCELADO`, y persistencia desacoplada del balance instantáneo de inventario.
+* **Motivo:** En el 1er Parcial, los traspasos se realizaban como un swap inmediato de saldos en `/api/inventory/movements/transfer`. Para el 2do Parcial y la metodología ICONIX, el movimiento físico de prendas entre tiendas requiere trazabilidad temporal estricta: descuento preventivo en origen para evitar sobreventas, retención de la mercadería en tránsito sin afectar la disponibilidad de la sucursal receptora, y confirmación formal mediante acta de recepción en destino (`COMPLETADO`) o restitución a origen ante anulación (`CANCELADO`).
+* **Impacto:**
+  - Migración `0042_add_inventory_transfers.py` con tablas `inventory_transfers` e `inventory_transfer_items`.
+  - Endpoints REST en `p3_gestion_inventario_disponibilidad` (`POST /api/inventory/transfers`, `GET /api/inventory/transfers`, `POST /api/inventory/transfers/{id}/receive`, `POST /api/inventory/transfers/{id}/cancel`).
+  - Frontend Web Angular 21 en [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) disponible en `/app/encargado/transfers` y `/app/admin/transfers`.
+  - Suite automatizada de pruebas unitarias y de integración ([`test_cu11_inventory_transfers.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu11_inventory_transfers.py)) con 5/5 pruebas PASSED.

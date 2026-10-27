@@ -41,27 +41,41 @@
 
 ---
 
+9. **CU11 – Registrar y Autorizar Traslados de Mercadería entre Sucursales (NUEVO & CONSOLIDADO):**
+   - **Migración 0042:** Tablas `inventory_transfers` e `inventory_transfer_items` creadas con claves foráneas, estados y timestamps de auditoría.
+   - **Ciclo de Vida Sagrado (ICONIX):**
+     1. Despacho en `EN_TRANSITO` descuenta inmediatamente el inventario disponible de la sucursal emisora ($StockDisponible = \max(quantity - reserved, 0)$) para evitar duplicidad de ventas en piso.
+     2. Retención en carretera: destino NO incrementa existencias hasta recepción física.
+     3. Recepción en destino: encargado receptor ejecuta `/api/inventory/transfers/{id}/receive`, incrementa el inventario destino y marca `COMPLETADO`.
+     4. Cancelación preventiva: `/api/inventory/transfers/{id}/cancel` restituye el stock descontado íntegramente al origen y marca `CANCELADO`.
+   - **Aislamiento Multitenant Estricto:** Validación de que ambas sucursales pertenezcan al mismo `tenant_id` autenticado.
+   - **Suite Automatizada:** [`backend/tests/test_cu11_inventory_transfers.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu11_inventory_transfers.py) con **5/5 tests PASSED**.
+   - **Frontend Web (Angular 21):** [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) en `/app/encargado/transfers` y `/app/admin/transfers` con KPIs, filtros salientes/entrantes, modales reactivos de despacho, recepción y cancelación.
+   - **Shims Zero Breakage:** Disponibles en `app/models/`, `app/schemas/`, `app/services/` y `app/routes/`.
+
+---
+
 ### 2. Credenciales Oficiales de Prueba (Sembradas en BD Central)
 * **Superadmin Global (CU01 / CU02):** `superadmin@fashionstore.com` / `SuperAdmin2026!` (Portal: `/app/superadmin/tenants`)
-* **Admin Boutique Elegance (CU04 / CU06 / CU10):** `admin@elegance.com` / `AdminElegance2026!` (Portal: `/app/admin/branch`)
-* **Admin Moda Urbana (CU04 / CU06 / CU10):** `admin@modaurbana.com` / `AdminUrbana2026!` (Portal: `/app/admin/branch`)
+* **Admin Boutique Elegance (CU04 / CU06 / CU10 / CU11):** `admin@elegance.com` / `AdminElegance2026!` (Portal: `/app/admin/branch` / `/app/admin/transfers`)
+* **Admin Moda Urbana (CU04 / CU06 / CU10 / CU11):** `admin@modaurbana.com` / `AdminUrbana2026!` (Portal: `/app/admin/branch` / `/app/admin/transfers`)
 
 ---
 
 ### 3. Estado de Servicios y Pruebas
-* **Backend Tests:** **22/22 pruebas unitarias e integración aprobadas al 100%:**
+* **Backend Tests:** **27/27 pruebas unitarias e integración aprobadas al 100%:**
+  - `tests/test_cu11_inventory_transfers.py`: 5/5 PASSED (Ciclo de vida en tránsito, recepción, stock insuficiente, fuga multitenant, cancelación con restitución).
   - `tests/test_cu06_cu10_catalog_offline.py`: 4/4 PASSED (Filtro catálogo, descarga offline-pack, sync idempotente con UUID, validación 422).
   - `tests/test_cu10_stock_availability.py`: 4/4 PASSED (Consulta multisede, compatibilidad unitaria, aislamiento de stock por tenant, validación 422).
   - `tests/test_cu06_cu07_multitenant_catalog.py`: 4/4 PASSED (Creación de variantes diferenciadas por talla, aislamiento administrativo, protección contra edición/borrado cruzado, búsqueda facetada por tenant).
   - `tests/test_business_rules.py`: 10/10 PASSED (Disponibilidad de inventario, stock no negativo, transiciones y descuentos).
-* **Frontend Web:** Tipado estricto e integración IndexedDB completos.
-* **Base de Datos:** Migración `0041` efectivamente aplicada en PostgreSQL (`alembic current` reporta `0041`).
+* **Frontend Web:** Tipado estricto (`tsc --noEmit` 0 errores), integración IndexedDB y módulo de traslados completos.
+* **Base de Datos:** Migración `0042` efectivamente aplicada en PostgreSQL (`alembic current` reporta `0042`).
 
 ---
 
 ### 4. Próxima Tarea Inmediata
-1. **Presentación 2 (CU11 & CU12):**
-   - CU11 (Registrar y Autorizar Traslados de Mercadería entre Sucursales con estados `EN_TRANSITO` y `COMPLETADO`).
-   - CU12 (Comprar Prendas con Pasarela Stripe y Despacho Condicionado al estado `paid` del webhook oficial).
-2. **Aplicación Móvil (Flutter / Dart):**
-   - SQLite local (`sqflite`) consumiendo `/api/catalog/offline-pack` y mapa con OpenStreetMap en CU21.
+1. **Presentación 2 (CU12):**
+   - CU12 (Comprar Prendas con Pasarela Stripe y Despacho Condicionado al estado `status = 'paid'` del webhook oficial).
+   - Backend `p4_gestion_compras_reservas` y `p5_gestion_ventas_pos` con Stripe PaymentIntents y webhooks con firma HMAC.
+   - Frontend Web: Componente de checkout con tarjeta Stripe y bloqueo de despacho si el pago está pendiente.
