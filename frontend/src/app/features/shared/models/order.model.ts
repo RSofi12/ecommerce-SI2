@@ -1,10 +1,21 @@
 export type PaymentMethodEnum = 'cash' | 'stripe';
 export type PaymentStatusEnum = 'pending' | 'paid' | 'failed';
-export type FulfillmentStatusEnum = 'pending_pickup' | 'ready_for_pickup' | 'collected' | 'expired' | 'cancelled';
+export type FulfillmentStatusEnum =
+  | 'pending_pickup'
+  | 'ready_for_pickup'
+  | 'ready_for_dispatch'
+  | 'dispatched'
+  | 'collected'
+  | 'delivered'
+  | 'expired'
+  | 'cancelled';
+
+export type DeliveryTypeEnum = 'RETIRO_TIENDA' | 'ENVIO_DOMICILIO';
 
 export interface OrderItem {
   id: string;
   order_id: string;
+  tenant_id?: string | null;
   variant_id: string;
   reservation_id?: string | null;
   quantity: number;
@@ -23,6 +34,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  tenant_id?: string | null;
   user_id: string;
   status: 'pending' | 'paid' | 'failed' | 'cancelled';
   payment_method: PaymentMethodEnum;
@@ -33,6 +45,11 @@ export interface Order {
   pickup_expires_at: string | null;
   pickup_code: string | null;
   fulfillment_status: FulfillmentStatusEnum;
+  delivery_type?: DeliveryTypeEnum | string;
+  shipping_address?: string | null;
+  tracking_number?: string | null;
+  dispatched_at?: string | null;
+  dispatched_by?: string | null;
   subtotal: string;
   discount_amount: string;
   promotion_code_id?: string | null;
@@ -41,4 +58,15 @@ export interface Order {
   created_at: string;
   updated_at: string | null;
   items: OrderItem[];
+}
+
+export interface OrderDispatchResponse {
+  order_id: string;
+  tenant_id?: string | null;
+  tracking_number: string;
+  delivery_type: string;
+  fulfillment_status: string;
+  dispatched_at: string;
+  dispatched_by?: string | null;
+  message: string;
 }

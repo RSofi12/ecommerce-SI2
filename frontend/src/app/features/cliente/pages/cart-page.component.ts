@@ -19,12 +19,15 @@ import { CatalogBranch } from '../../shared/models/catalog.model';
 import { CartApiService } from '../../shared/services/cart-api.service';
 import { CatalogApiService } from '../../shared/services/catalog-api.service';
 import { Order } from '../../shared/models/order.model';
-import { CheckoutApiService } from '../../shared/services/checkout-api.service';
+import { CheckoutApiService, CheckoutRequestPayload } from '../../shared/services/checkout-api.service';
 import { environment } from '../../../../environments/environment';
 
 type StripeCheckout = {
   orderId: string;
   pickupExpiresAt: string;
+  trackingNumber?: string | null;
+  deliveryType?: string;
+  shippingAddress?: string | null;
 };
 
 @Component({
@@ -53,7 +56,9 @@ export class CartPageComponent {
   protected readonly stripePaymentStatus = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly updatingItemId = signal<string | null>(null);
-  protected readonly checkoutMethod = signal<'cash' | 'stripe'>('cash');
+  protected readonly checkoutMethod = signal<'cash' | 'stripe'>('stripe');
+  protected readonly deliveryType = signal<'RETIRO_TIENDA' | 'ENVIO_DOMICILIO'>('ENVIO_DOMICILIO');
+  protected readonly shippingAddress = signal<string>('');
   protected readonly pickupBranchId = signal('');
   protected readonly checkingOut = signal(false);
   protected readonly couponCode = signal('');
@@ -81,6 +86,21 @@ export class CartPageComponent {
 
   protected async refresh(): Promise<void> {
     await this.loadCart();
+  }
+
+  protected selectDeliveryType(type: 'RETIRO_TIENDA' | 'ENVIO_DOMICILIO'): void {
+    this.deliveryType.set(type);
+    if (type === 'ENVIO_DOMICILIO' && this.checkoutMethod() === 'cash') {
+      this.checkoutMethod.set('stripe');
+    }
+  }
+
+  protected selectCheckoutMethod(method: 'cash' | 'stripe'): void {
+    if (method === 'cash' && this.deliveryType() === 'ENVIO_DOMICILIO') {
+      toast.info('Para pago en efectivo, la entrega es por retiro presencial en sucursal.');
+      this.deliveryType.set('RETIRO_TIENDA');
+    }
+    this.checkoutMethod.set(method);
   }
 
   protected async increase(itemId: string, quantity: number): Promise<void> {
@@ -152,23 +172,38 @@ export class CartPageComponent {
       toast.warning('Tu carrito está vacío.');
       return;
     }
+
+    const isHomeDelivery = this.deliveryType() === 'ENVIO_DOMICILIO';
+    const address = this.shippingAddress().trim();
     const pickupBranchId = this.pickupBranchId();
-    if (!pickupBranchId) {
-      toast.warning('Selecciona una sucursal para el retiro.');
+
+    if (isHomeDelivery && !address) {
+      toast.warning('Ingresa la dirección completa para el envío a domicilio.');
       return;
     }
+
+    if (!isHomeDelivery && !pickupBranchId) {
+      toast.warning('Selecciona la sucursal donde recogerás tu pedido.');
+      return;
+    }
+
+    const payload: CheckoutRequestPayload = {
+      delivery_type: this.deliveryType(),
+      pickup_branch_id: pickupBranchId || undefined,
+      shipping_address: isHomeDelivery ? address : undefined,
+    };
 
     this.checkingOut.set(true);
     try {
       if (this.checkoutMethod() === 'cash') {
         const response = await requestWithToast(
-          this.checkoutApi.checkoutCash({ pickup_branch_id: pickupBranchId }),
-          { loading: 'Creando pedido...', success: 'Pedido para retiro creado.', error: 'No se pudo crear el pedido.' },
+          this.checkoutApi.checkoutCash(payload),
+          { loading: 'Creando pedido...', success: 'Pedido para retiro en tienda creado.', error: 'No se pudo crear el pedido.' },
         );
         this.lastOrder.set(response.data ?? null);
         this.clearStripeCheckout();
       } else {
-        await this.startStripeCheckout(pickupBranchId);
+        await this.startStripeCheckout(payload);
       }
       await this.loadCart();
     } catch {
@@ -189,36 +224,35 @@ export class CartPageComponent {
   protected downloadSalesNote(order: Order): void {
     downloadSimplePdf({
       filename: `nota-venta-${order.id}.pdf`,
-      title: 'Nota de venta',
+      title: 'Nota de venta — FashionStore',
       generatedAt: new Date().toLocaleString('es-BO'),
       filters: [
-        ['Pedido', order.id],
+        ['Pedido ID', order.id],
         ['Fecha', new Date(order.created_at).toLocaleString('es-BO')],
-        ['Pago', ({ pending: 'Pendiente', paid: 'Pagado', failed: 'Fallido' } satisfies Record<Order['payment_status'], string>)[order.payment_status]],
-        ['Método', order.payment_method === 'stripe' ? 'Tarjeta' : 'Efectivo'],
+        ['Modalidad', order.delivery_type === 'ENVIO_DOMICILIO' ? 'Envío a domicilio' : 'Retiro en sucursal'],
+        ...(order.shipping_address ? [['Dirección de entrega', order.shipping_address]] : []),
+        ...(order.tracking_number ? [['Guía de seguimiento', order.tracking_number]] : []),
+        ['Estado de pago', ({ pending: 'Pendiente', paid: 'Pagado', failed: 'Fallido', cancelled: 'Cancelado' } as Record<string, string>)[order.payment_status] ?? order.payment_status],
+        ['Método de pago', order.payment_method === 'stripe' ? 'Tarjeta (Stripe)' : 'Efectivo'],
         ...(order.pickup_code ? [['Código de retiro', order.pickup_code]] : []),
-        ['Subtotal', `${order.subtotal} ${order.currency}`],
-        ['Descuento', `${order.discount_amount} ${order.currency}`],
-        ['Total', `${order.total_amount} ${order.currency}`],
+        ['Subtotal', `${order.subtotal} ${order.currency.toUpperCase()}`],
+        ['Descuento', `${order.discount_amount} ${order.currency.toUpperCase()}`],
+        ['Total pagado', `${order.total_amount} ${order.currency.toUpperCase()}`],
       ],
       columns: ['Producto', 'Variante', 'Cantidad', 'Precio unitario', 'Total'],
       rows: order.items.map((item) => [
         item.product_name,
         [item.size_name, item.color_name].filter(Boolean).join(' / ') || item.variant_sku,
         String(item.quantity),
-        `${item.unit_price} ${order.currency}`,
-        `${item.line_total} ${order.currency}`,
+        `${item.unit_price} ${order.currency.toUpperCase()}`,
+        `${item.line_total} ${order.currency.toUpperCase()}`,
       ]),
     });
   }
 
-  protected selectCheckoutMethod(method: 'cash' | 'stripe'): void {
-    this.checkoutMethod.set(method);
-  }
-
   protected branchLabel(branchId: string | null | undefined): string {
     const branch = this.branches().find((item) => item.id === branchId);
-    return branch ? `${branch.name} - ${branch.city}` : 'Sin sucursal';
+    return branch ? `${branch.name} - ${branch.city}` : 'Sucursal central asignada';
   }
 
   protected async confirmStripePayment(): Promise<void> {
@@ -236,7 +270,7 @@ export class CartPageComponent {
       });
       if (error) {
         this.stripePaymentStatus.set('error');
-        toast.error(error.message ?? 'No se pudo confirmar el pago.');
+        toast.error(error.message ?? 'No se pudo confirmar el pago con Stripe.');
       } else if (paymentIntent?.status === 'succeeded') {
         const orderId = this.stripeCheckout()?.orderId;
         if (!orderId) return;
@@ -245,21 +279,25 @@ export class CartPageComponent {
         this.lastOrder.set(order);
         if (order?.payment_status === 'paid') {
           this.stripePaymentStatus.set('paid');
-          toast.success('Pago confirmado. Tu pedido queda pendiente de retiro.');
+          toast.success(
+            order.tracking_number
+              ? `¡Pago confirmado por Stripe! Guía generada: ${order.tracking_number}`
+              : '¡Pago confirmado por Stripe! Tu pedido está en preparación.'
+          );
         } else {
           this.stripePaymentStatus.set('pending');
-          toast.info('Pago enviado. Esperando confirmación del servidor.');
+          toast.info('Pago enviado a Stripe. Esperando confirmación bancaria.');
         }
       } else if (paymentIntent?.status === 'canceled') {
         this.stripePaymentStatus.set('cancelled');
-        toast.warning('El pago fue cancelado.');
+        toast.warning('El intento de pago fue cancelado.');
       } else {
         this.stripePaymentStatus.set('pending');
-        toast.info('El pago está pendiente de confirmación.');
+        toast.info('El pago está pendiente de confirmación bancaria.');
       }
     } catch {
       this.stripePaymentStatus.set('error');
-      toast.error('No se pudo confirmar el pago.');
+      toast.error('No se pudo confirmar el pago con la pasarela.');
     } finally {
       this.checkingOut.set(false);
     }
@@ -281,13 +319,17 @@ export class CartPageComponent {
   private async loadBranches(): Promise<void> {
     try {
       const response = await firstValueFrom(this.catalogApi.listPublicBranches());
-      this.branches.set(response.data ?? []);
+      const branchList = response.data ?? [];
+      this.branches.set(branchList);
+      if (branchList.length > 0 && !this.pickupBranchId()) {
+        this.pickupBranchId.set(branchList[0].id);
+      }
     } catch (error) {
       toast.error(getErrorMessage(error, 'No se pudieron cargar las sucursales.'));
     }
   }
 
-  private async startStripeCheckout(pickupBranchId: string): Promise<void> {
+  private async startStripeCheckout(payload: CheckoutRequestPayload): Promise<void> {
     if (!environment.stripePublishableKey) {
       toast.error('Stripe no está configurado para esta aplicación.');
       return;
@@ -295,16 +337,16 @@ export class CartPageComponent {
     try {
       this.stripe = await loadStripe(environment.stripePublishableKey);
     } catch {
-      toast.error('No se pudo cargar Stripe.');
+      toast.error('No se pudo cargar Stripe SDK.');
       return;
     }
     if (!this.stripe) {
-      toast.error('No se pudo cargar Stripe.');
+      toast.error('No se pudo inicializar Stripe.');
       return;
     }
     const response = await requestWithToast(
-      this.checkoutApi.checkoutStripe({ pickup_branch_id: pickupBranchId }),
-      { loading: 'Iniciando Stripe...', success: 'Completa los datos de tu tarjeta.', error: 'No se pudo iniciar Stripe.' },
+      this.checkoutApi.checkoutStripe(payload),
+      { loading: 'Inicializando sesión segura de Stripe...', success: 'Completa los datos de tu tarjeta bancaria.', error: 'No se pudo iniciar el checkout de Stripe.' },
     );
     const checkout = response.data;
     if (!checkout) return;
@@ -312,7 +354,13 @@ export class CartPageComponent {
     this.clearStripeCheckout();
     this.stripeElements = this.stripe.elements({ clientSecret: checkout.client_secret });
     this.stripePaymentElement = this.stripeElements.create('payment');
-    this.stripeCheckout.set({ orderId: checkout.order_id, pickupExpiresAt: checkout.pickup_expires_at });
+    this.stripeCheckout.set({
+      orderId: checkout.order_id,
+      pickupExpiresAt: checkout.pickup_expires_at,
+      trackingNumber: checkout.tracking_number,
+      deliveryType: checkout.delivery_type,
+      shippingAddress: checkout.shipping_address,
+    });
     this.stripePaymentStatus.set('ready');
   }
 
@@ -332,7 +380,7 @@ export class CartPageComponent {
     try {
       const response = await requestWithToast(
         this.cartApi.updateItem(itemId, { quantity }),
-        { loading: 'Actualizando carrito...', success: 'Carrito actualizado.', error: 'No se pudo actualizar el carrito.' },
+        { loading: 'Actualizando cantidad...', success: 'Carrito actualizado.', error: 'No se pudo actualizar el carrito.' },
       );
       this.cart.set(response.data ?? null);
     } catch {

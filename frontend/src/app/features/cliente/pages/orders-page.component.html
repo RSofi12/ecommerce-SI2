@@ -1,18 +1,355 @@
-<section class="space-y-5">
-  <header class="flex items-end justify-between gap-3">
-    <div><h1 class="text-2xl font-semibold">Mis pedidos</h1><p class="text-sm text-slate-500">Consulta el estado y el detalle de tus compras.</p></div>
-    <button hlmBtn type="button" variant="outline" (click)="load()" [disabled]="loading()">Actualizar</button>
+<section class="space-y-6">
+  <!-- Top bar & Header -->
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Mis Pedidos</h1>
+      <p class="text-sm text-slate-500">Historial de compras, estado de pagos y seguimiento de despachos.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button hlmBtn type="button" variant="outline" (click)="load()" [disabled]="loading()">
+        Actualizar
+      </button>
+    </div>
   </header>
-  @if (error()) { <p class="text-sm text-red-600">{{ error() }}</p> }
-  <div class="grid gap-4 lg:grid-cols-2">
+
+  <!-- Quick Tracking Search -->
+  <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="space-y-0.5">
+        <h2 class="text-sm font-semibold text-slate-900">Rastrear Guía de Despacho</h2>
+        <p class="text-xs text-slate-500">Ingresa tu código único de seguimiento (ej. DSP-20261028-A1B2) para ver la ubicación y estado.</p>
+      </div>
+      <div class="flex w-full items-center gap-2 sm:w-auto">
+        <input
+          hlmInput
+          type="text"
+          placeholder="DSP-YYYYMMDD-XXXX"
+          class="w-full font-mono text-sm uppercase sm:w-64"
+          [ngModel]="trackingQuery()"
+          (ngModelChange)="trackingQuery.set($event)"
+          (keydown.enter)="searchTracking()"
+        />
+        <button
+          hlmBtn
+          type="button"
+          class="shrink-0 bg-slate-900 text-white hover:bg-slate-800"
+          [disabled]="trackingSearchLoading()"
+          (click)="searchTracking()"
+        >
+          @if (trackingSearchLoading()) {
+            Buscando...
+          } @else {
+            Rastrear
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Orders Grid -->
+  <div class="grid gap-5 lg:grid-cols-2">
     @for (order of orders(); track order.id) {
-      <article hlmCard class="bg-white shadow-sm"><div hlmCardHeader><h2 hlmCardTitle>Pedido {{ order.id }}</h2><p hlmCardDescription>{{ order.created_at | date:'medium' }}</p></div>
-        <div hlmCardContent class="space-y-3"><div class="flex items-center justify-between"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">{{ statusLabel(order.fulfillment_status) }}</span><span class="font-semibold">{{ order.total_amount }} {{ order.currency }}</span></div>
-          <div class="space-y-1 border-t border-slate-200 pt-3 text-sm">@for (item of order.items; track item.id) { <div class="flex justify-between"><span>{{ item.product_name }} · {{ item.quantity }}</span><span>{{ item.line_total }}</span></div> }</div>
-          @if (order.pickup_code && order.fulfillment_status !== 'collected') { <p class="text-xs text-slate-500">Código de retiro: <strong>{{ order.pickup_code }}</strong></p> }
-          <button hlmBtn type="button" variant="outline" class="w-full" (click)="downloadSalesNote(order)">Descargar nota de venta</button>
+      <article hlmCard class="flex flex-col justify-between border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+        <div>
+          <div hlmCardHeader class="border-b border-slate-100 pb-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <span class="font-mono text-xs text-slate-400">PEDIDO #{{ order.id.slice(0, 8) }}</span>
+                <h3 class="text-base font-semibold text-slate-900">{{ order.created_at | date:'d/MM/yyyy, HH:mm' }}</h3>
+              </div>
+              <div class="flex flex-wrap items-center justify-end gap-1.5">
+                <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium" [ngClass]="paymentStatusClass(order.payment_status)">
+                  {{ paymentStatusLabel(order.payment_status) }}
+                </span>
+                <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium" [ngClass]="statusBadgeClass(order.fulfillment_status)">
+                  {{ statusLabel(order.fulfillment_status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Delivery Mode Pill -->
+            <div class="mt-2.5 flex items-center gap-2">
+              <span class="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                {{ order.delivery_type === 'ENVIO_DOMICILIO' ? '🚚 Envío a Domicilio' : '🏪 Retiro en Sucursal' }}
+              </span>
+              <span class="text-xs text-slate-400">·</span>
+              <span class="text-xs text-slate-500">
+                {{ order.payment_method === 'stripe' ? 'Pago con Tarjeta' : 'Pago Efectivo' }}
+              </span>
+            </div>
+          </div>
+
+          <div hlmCardContent class="space-y-4 pt-4">
+            <!-- Tracking banner if dispatched or generated -->
+            @if (order.tracking_number) {
+              <div class="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/70 p-3">
+                <div class="space-y-0.5">
+                  <p class="text-[11px] font-semibold uppercase tracking-wider text-blue-900">Guía de Despacho Asignada</p>
+                  <p class="font-mono text-sm font-bold text-blue-700">{{ order.tracking_number }}</p>
+                </div>
+                <button
+                  hlmBtn
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  class="border-blue-300 bg-white text-blue-800 hover:bg-blue-100"
+                  (click)="openTracking(order)"
+                >
+                  Ver Rastreo
+                </button>
+              </div>
+            }
+
+            <!-- Pickup code if applicable -->
+            @if (order.pickup_code && order.fulfillment_status !== 'collected') {
+              <div class="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900">
+                <span class="font-semibold">Código para retiro en caja:</span>
+                <span class="ml-1 font-mono font-bold tracking-widest">{{ order.pickup_code }}</span>
+              </div>
+            }
+
+            <!-- Shipping address if delivery -->
+            @if (order.shipping_address) {
+              <div class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-xs text-slate-600">
+                <span class="font-semibold text-slate-800">Dirección de entrega:</span>
+                <p class="mt-0.5 text-slate-700">{{ order.shipping_address }}</p>
+              </div>
+            }
+
+            <!-- Items list preview -->
+            <div class="space-y-2 border-t border-slate-100 pt-3">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Prendas adquiridas</p>
+              @for (item of order.items; track item.id) {
+                <div class="flex items-center justify-between text-sm">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-xs font-bold text-slate-700">
+                      {{ item.quantity }}
+                    </span>
+                    <span class="font-medium text-slate-800">{{ item.product_name }}</span>
+                    <span class="text-xs text-slate-400">({{ formatItemVariant(item) }})</span>
+                  </div>
+                  <span class="font-medium text-slate-900">{{ item.line_total }} {{ order.currency }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Total summary -->
+            <div class="flex items-center justify-between border-t border-slate-100 pt-3 font-semibold text-slate-900">
+              <span class="text-sm">Total abonado</span>
+              <span class="text-base">{{ order.total_amount }} {{ order.currency }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action footer -->
+        <div class="border-t border-slate-100 p-4 pt-3">
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <button
+              hlmBtn
+              type="button"
+              variant="outline"
+              class="w-full text-xs"
+              (click)="openTracking(order)"
+            >
+              Línea de Vida y Rastreo
+            </button>
+            <button
+              hlmBtn
+              type="button"
+              variant="outline"
+              class="w-full text-xs"
+              (click)="downloadSalesNote(order)"
+            >
+              Descargar Nota PDF
+            </button>
+          </div>
         </div>
       </article>
-    } @empty { <div class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Aún no tienes pedidos.</div> }
+    } @empty {
+      <div class="col-span-full rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+        <p class="text-base font-semibold text-slate-700">Aún no registras pedidos</p>
+        <p class="mt-1 text-sm text-slate-500">Agrega prendas a tu carrito y finaliza tu compra con tarjeta Stripe o en sucursal.</p>
+      </div>
+    }
   </div>
 </section>
+
+<!-- Tracking Modal / Stepper -->
+@if (showTrackingModal() && activeTrackingOrder()) {
+  @let order = activeTrackingOrder()!;
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-in fade-in">
+    <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="font-mono text-xs uppercase tracking-wider text-slate-400">Seguimiento de Despacho</span>
+          <h2 class="text-xl font-bold text-slate-900">Pedido #{{ order.id.slice(0, 8) }}</h2>
+          @if (order.tracking_number) {
+            <p class="mt-0.5 font-mono text-sm font-semibold text-blue-700">Guía: {{ order.tracking_number }}</p>
+          }
+        </div>
+        <button
+          type="button"
+          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          (click)="closeTracking()"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Stepper Visual Timeline -->
+      <div class="py-6">
+        <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Estado en tiempo real (ICONIX CU12)</p>
+        
+        <div class="space-y-5">
+          <!-- Step 1: Orden Creada -->
+          <div class="flex items-start gap-3">
+            <div class="flex flex-col items-center">
+              <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm">
+                ✓
+              </span>
+              <div class="h-10 w-0.5 bg-slate-200"></div>
+            </div>
+            <div class="pt-0.5">
+              <h4 class="text-sm font-semibold text-slate-900">Pedido Creado</h4>
+              <p class="text-xs text-slate-500">Registrado en la plataforma: {{ order.created_at | date:'d/MM/yyyy HH:mm' }}</p>
+            </div>
+          </div>
+
+          <!-- Step 2: Pago Stripe Verificado (Condición de Despacho) -->
+          <div class="flex items-start gap-3">
+            <div class="flex flex-col items-center">
+              @if (isStepDone(order, 'paid')) {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm">
+                  ✓
+                </span>
+              } @else {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-amber-500 bg-amber-50 text-xs font-bold text-amber-700">
+                  !
+                </span>
+              }
+              <div class="h-10 w-0.5" [ngClass]="isStepDone(order, 'paid') ? 'bg-emerald-500' : 'bg-slate-200'"></div>
+            </div>
+            <div class="pt-0.5">
+              <div class="flex items-center gap-2">
+                <h4 class="text-sm font-semibold text-slate-900">Pago Verificado (Stripe)</h4>
+                <span class="rounded px-2 py-0.5 text-[10px] font-medium" [ngClass]="order.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
+                  {{ order.payment_status === 'paid' ? 'Condición Cumplida' : 'Pendiente' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">
+                {{ order.payment_status === 'paid' ? 'El pago fue procesado con éxito en Stripe. Autoriza el despacho digital/físico.' : 'Pago pendiente. Conforme a la Política 3, no se autoriza despacho sin confirmación.' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 3: Preparación en Almacén -->
+          <div class="flex items-start gap-3">
+            <div class="flex flex-col items-center">
+              @if (isStepDone(order, 'prepared')) {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm">
+                  ✓
+                </span>
+              } @else {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-xs font-semibold text-slate-400">
+                  3
+                </span>
+              }
+              <div class="h-10 w-0.5" [ngClass]="isStepDone(order, 'prepared') ? 'bg-emerald-500' : 'bg-slate-200'"></div>
+            </div>
+            <div class="pt-0.5">
+              <h4 class="text-sm font-semibold text-slate-900">Preparación de Prendas</h4>
+              <p class="text-xs text-slate-500">
+                Control de inventario, empaque y verificación de tallas y colores.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 4: Despacho / En Ruta -->
+          <div class="flex items-start gap-3">
+            <div class="flex flex-col items-center">
+              @if (isStepDone(order, 'dispatched')) {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-sm">
+                  ✓
+                </span>
+              } @else {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-xs font-semibold text-slate-400">
+                  4
+                </span>
+              }
+              <div class="h-10 w-0.5" [ngClass]="isStepDone(order, 'dispatched') ? 'bg-blue-500' : 'bg-slate-200'"></div>
+            </div>
+            <div class="pt-0.5">
+              <h4 class="text-sm font-semibold text-slate-900">Despacho y Asignación de Guía</h4>
+              <p class="text-xs text-slate-500">
+                @if (order.tracking_number) {
+                  Asignado a logística con guía <strong class="font-mono text-blue-700">{{ order.tracking_number }}</strong>.
+                } @else {
+                  A la espera de autorización y salida del centro de distribución.
+                }
+              </p>
+              @if (order.dispatched_at) {
+                <p class="mt-0.5 text-[11px] text-slate-400">Fecha de despacho: {{ order.dispatched_at | date:'d/MM/yyyy HH:mm' }}</p>
+              }
+            </div>
+          </div>
+
+          <!-- Step 5: Entrega -->
+          <div class="flex items-start gap-3">
+            <div class="flex flex-col items-center">
+              @if (isStepDone(order, 'delivered')) {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm">
+                  ✓
+                </span>
+              } @else {
+                <span class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-xs font-semibold text-slate-400">
+                  5
+                </span>
+              }
+            </div>
+            <div class="pt-0.5">
+              <h4 class="text-sm font-semibold text-slate-900">Entregado al Cliente</h4>
+              <p class="text-xs text-slate-500">
+                {{ order.delivery_type === 'ENVIO_DOMICILIO' ? 'Recepción confirmada en domicilio.' : 'Retirado por el cliente en sucursal.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Details Summary -->
+      <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600">Detalle del Envío</h4>
+        <dl class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <dt class="text-slate-400">Tipo de Entrega:</dt>
+            <dd class="font-semibold text-slate-800">{{ order.delivery_type === 'ENVIO_DOMICILIO' ? 'Envío a Domicilio' : 'Retiro en Tienda' }}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-400">Guía de Seguimiento:</dt>
+            <dd class="font-mono font-semibold text-blue-700">{{ order.tracking_number || 'Aún no generada' }}</dd>
+          </div>
+          @if (order.shipping_address) {
+            <div class="col-span-2">
+              <dt class="text-slate-400">Dirección de Entrega:</dt>
+              <dd class="font-medium text-slate-800">{{ order.shipping_address }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+        <button hlmBtn type="button" variant="outline" (click)="closeTracking()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}

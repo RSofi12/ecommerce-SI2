@@ -5,6 +5,7 @@ export interface CatalogBranch {
   name: string;
   city: string;
   is_default: boolean;
+  address?: string | null;
 }
 
 export interface CatalogNameItem {

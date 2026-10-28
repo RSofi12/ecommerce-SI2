@@ -245,6 +245,10 @@ export const routes: Routes = [
             path: 'replenishment',
             loadComponent: () => import('./features/shared/pages/replenishment-page.component').then((m) => m.ReplenishmentPageComponent),
           },
+          {
+            path: 'orders',
+            loadComponent: () => import('./features/encargado/pages/orders-page.component').then((m) => m.EncargadoOrdersPageComponent),
+          },
         ],
       },
       {

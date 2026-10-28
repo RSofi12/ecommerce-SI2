@@ -181,6 +181,7 @@ export class AppShellComponent {
               { label: 'Sucursales', route: '/app/admin/branch', icon: 'lucideLayoutDashboard' },
               { label: 'Proveedores', route: '/app/admin/provider', icon: 'lucideUsers' },
               { label: 'Solicitudes', route: '/app/admin/replenishment', icon: 'lucideClipboardList' },
+              { label: 'Pedidos / Despachos', route: '/app/admin/orders', icon: 'lucideClipboardList' },
             ],
           },
         ];
