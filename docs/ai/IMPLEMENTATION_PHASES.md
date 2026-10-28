@@ -34,7 +34,7 @@ Documento oficial de control de avance de los **28 Casos de Uso** organizados po
 **Objetivo Técnico:** Ventas Offline, Cola de Sincronización, Idempotencia, Stripe, Devoluciones, Cambios de Prenda y Mapas.
 
 - [x] **CU11 – Registrar Movimiento de Inventario y Traspasos** [1er Parcial - MODIFICADO]
-- [x] **CU12 – Gestionar Carrito y Compra Digital con Pasarela Stripe** [1er Parcial - MODIFICADO - Backend & BD Consolidado]
+- [x] **CU12 – Gestionar Carrito y Compra Digital con Pasarela Stripe y Despacho Condicionado** [1er Parcial - MODIFICADO - 100% Implementado (Backend, BD y Frontend Web)]
   - *Regla de negocio:* El envío/entrega solo se autoriza con pago confirmado en Stripe (Política 3).
 - [ ] **CU13 – Registrar Reserva de Prendas (Online y Offline)** [2do Parcial - NUEVO]
 - [ ] **CU14 – Atender Reserva y Resolver Conflictos de Stock** [1er Parcial - MODIFICADO]

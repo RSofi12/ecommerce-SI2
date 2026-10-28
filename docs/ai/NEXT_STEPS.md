@@ -52,7 +52,7 @@
    - [x] Suite de pruebas automatizadas en `backend/tests/test_cu11_inventory_transfers.py` (5/5 PASSED).
    - [x] Frontend Web en Angular 21: [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) en `/app/encargado/transfers` y `/app/admin/transfers`.
 
-2. **CU12: Comprar Prendas con Stripe y Despacho Condicionado (BACKEND & BD CONSOLIDADO):**
+2. **CU12: Comprar Prendas con Stripe y Despacho Condicionado (100% COMPLETADO FULLSTACK):**
    - [x] Migración Alembic `0043_add_order_tenant_and_dispatch.py` aplicada (`tenant_id`, `delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at`, `dispatched_by` en `orders`, y `tenant_id` en `order_items`, `carts`, `cart_items`, `payment_attempts`).
    - [x] Enum `fulfillmentstatusenum` ampliado en PostgreSQL (`ready_for_dispatch`, `dispatched`, `delivered`).
    - [x] **Política de Negocio 3 (Inviolable):** Bloqueo estricto de despacho en `order_service.py` (`dispatch_order`) si `payment_status != 'paid'`.
@@ -61,6 +61,6 @@
    - [x] Suite automatizada `test_cu12_stripe_conditioned_dispatch.py` (5/5 PASSED).
 
 3. **Próximos Pasos Inmediatos:**
-   - [ ] Frontend Web (Angular 21): Vista de Checkout con pasarela Stripe Elements para el cliente y pantalla de Despacho/Rastreo para administración.
+   - [x] Frontend Web en Angular 21: Checkout con Stripe Elements en cart-page, seguimiento ICONIX interactivo con stepper en orders-page, y panel de despacho en /app/admin/orders y /app/encargado/orders con notas de transporte.
    - [ ] CU13 – Registrar Reserva de Prendas (Online y Offline).
    - [ ] CU14 – Atender Reserva y Resolver Conflictos de Stock.

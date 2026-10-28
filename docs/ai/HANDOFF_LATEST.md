@@ -55,7 +55,7 @@
 
 ---
 
-10. **CU12 – Comprar Prendas con Stripe y Despacho Condicionado (BACKEND & BD CONSOLIDADO):**
+10. **CU12 – Comprar Prendas con Stripe y Despacho Condicionado (100% FULLSTACK):**
     - **Migración 0043:** Tablas `orders`, `order_items`, `carts`, `cart_items`, `payment_attempts` integran `tenant_id` obligatorio/indexado para aislamiento SaaS; `orders` incorpora `delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at` y `dispatched_by`.
     - **Ampliación de Enum en PostgreSQL:** `fulfillmentstatusenum` extendido con `'ready_for_dispatch'`, `'dispatched'`, `'delivered'`.
     - **Política de Negocio 3 (Inviolable):** Implementado en `dispatch_order`: el despacho físico de prendas solo se autoriza si `payment_status = 'paid'`. Cualquier intento de despacho sobre pedidos impagos es rechazado con HTTP 400 Bad Request.
