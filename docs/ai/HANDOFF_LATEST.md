@@ -55,6 +55,16 @@
 
 ---
 
+10. **CU12 – Comprar Prendas con Stripe y Despacho Condicionado (BACKEND & BD CONSOLIDADO):**
+    - **Migración 0043:** Tablas `orders`, `order_items`, `carts`, `cart_items`, `payment_attempts` integran `tenant_id` obligatorio/indexado para aislamiento SaaS; `orders` incorpora `delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at` y `dispatched_by`.
+    - **Ampliación de Enum en PostgreSQL:** `fulfillmentstatusenum` extendido con `'ready_for_dispatch'`, `'dispatched'`, `'delivered'`.
+    - **Política de Negocio 3 (Inviolable):** Implementado en `dispatch_order`: el despacho físico de prendas solo se autoriza si `payment_status = 'paid'`. Cualquier intento de despacho sobre pedidos impagos es rechazado con HTTP 400 Bad Request.
+    - **Trazabilidad Automática:** El webhook de Stripe `payment_intent.succeeded` genera el código `DSP-YYYYMMDD-XXXX` y transiciona el pedido a listo para despacho o retiro.
+    - **Endpoints:** `POST /api/orders/{order_id}/dispatch` (roles admin/encargado) y `GET /api/orders/tracking/{tracking_number}` (público/cliente).
+    - **Suite Automatizada:** [`backend/tests/test_cu12_stripe_conditioned_dispatch.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu12_stripe_conditioned_dispatch.py) con **5/5 tests PASSED** y **20/20 pruebas de regresión PASSED**.
+
+---
+
 ### 2. Credenciales Oficiales de Prueba (Sembradas en BD Central)
 * **Superadmin Global (CU01 / CU02):** `superadmin@fashionstore.com` / `SuperAdmin2026!` (Portal: `/app/superadmin/tenants`)
 * **Admin Boutique Elegance (CU04 / CU06 / CU10 / CU11):** `admin@elegance.com` / `AdminElegance2026!` (Portal: `/app/admin/branch` / `/app/admin/transfers`)

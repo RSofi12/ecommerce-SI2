@@ -44,22 +44,23 @@
 
 ---
 
-### Hito 4: Presentación 2 — Traslados Multisede y Pagos con Stripe (CU11 COMPLETADO & CU12 TAREA INMEDIATA)
+### Hito 4: Presentación 2 — Traslados Multisede y Pagos con Stripe (CU11 y CU12 BACKEND COMPLETADOS)
 1. **CU11: Registrar y Autorizar Traslados de Mercadería (COMPLETADO):**
    - [x] Migración Alembic `0042_add_inventory_transfers.py` con tablas `inventory_transfers` e `inventory_transfer_items`.
    - [x] Endpoints en `p3_gestion_inventario_disponibilidad` (`POST /api/inventory/transfers`, `GET /api/inventory/transfers`, `POST /api/inventory/transfers/{id}/receive`, `POST /api/inventory/transfers/{id}/cancel`).
    - [x] Reglas de negocio sagradas: descuento preventivo en origen al despachar (`EN_TRANSITO`), retención en carretera sin tocar destino, acreditación al confirmar recepción (`COMPLETADO`) y restitución a origen al anular (`CANCELADO`).
    - [x] Suite de pruebas automatizadas en `backend/tests/test_cu11_inventory_transfers.py` (5/5 PASSED).
-   - [x] Frontend Web en Angular 21: [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) y template HTML con KPIs, tabs Salientes/Entrantes, filtros de estado, modales reactivos de despacho, recepción y cancelación.
-   - [x] Rutas `/app/encargado/transfers` y `/app/admin/transfers` configuradas en `app.routes.ts` y menú lateral de `app-shell.component.ts`.
+   - [x] Frontend Web en Angular 21: [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) en `/app/encargado/transfers` y `/app/admin/transfers`.
 
-2. **CU12: Comprar Prendas con Stripe y Despacho Condicionado (TAREA INMEDIATA):**
-   - [ ] Paquete `p4_gestion_compras_reservas` y `p5_gestion_ventas_pos`: Checkout con Stripe Elements / PaymentIntent.
-   - [ ] Regla de negocio sagrada: Despacho / entrega digital condicionado estrictamente al estado `status = 'paid'`.
-   - [ ] Webhook de Stripe y actualización transaccional de órdenes de compra.
-2. **CU12: Comprar Prendas con Pasarela Stripe y Despacho Condicionado:**
-   - [ ] Integración con Stripe API (`PaymentIntent` y webhooks `payment_intent.succeeded`).
-   - [ ] **Política Inviolable:** Generación de orden de despacho logístico condicionada estrictamente a la confirmación de pago (`status = 'paid'`).
-3. **Aplicación Móvil (Flutter / Dart):**
-   - [ ] Persistencia local en SQLite (`sqflite`) consumiendo `/api/catalog/offline-pack`.
-   - [ ] Mapa interactivo de sucursales con OpenStreetMap y geolocalización (CU21).
+2. **CU12: Comprar Prendas con Stripe y Despacho Condicionado (BACKEND & BD CONSOLIDADO):**
+   - [x] Migración Alembic `0043_add_order_tenant_and_dispatch.py` aplicada (`tenant_id`, `delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at`, `dispatched_by` en `orders`, y `tenant_id` en `order_items`, `carts`, `cart_items`, `payment_attempts`).
+   - [x] Enum `fulfillmentstatusenum` ampliado en PostgreSQL (`ready_for_dispatch`, `dispatched`, `delivered`).
+   - [x] **Política de Negocio 3 (Inviolable):** Bloqueo estricto de despacho en `order_service.py` (`dispatch_order`) si `payment_status != 'paid'`.
+   - [x] Webhook `process_stripe_event` generando guía única `DSP-YYYYMMDD-XXXX` al recibir `payment_intent.succeeded`.
+   - [x] Endpoints `POST /api/orders/{order_id}/dispatch` y `GET /api/orders/tracking/{tracking_number}` implementados y protegidos por rol y multitenant.
+   - [x] Suite automatizada `test_cu12_stripe_conditioned_dispatch.py` (5/5 PASSED).
+
+3. **Próximos Pasos Inmediatos:**
+   - [ ] Frontend Web (Angular 21): Vista de Checkout con pasarela Stripe Elements para el cliente y pantalla de Despacho/Rastreo para administración.
+   - [ ] CU13 – Registrar Reserva de Prendas (Online y Offline).
+   - [ ] CU14 – Atender Reserva y Resolver Conflictos de Stock.

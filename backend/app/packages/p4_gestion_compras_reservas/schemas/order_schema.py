@@ -27,22 +27,35 @@ class PaymentStatusEnum(str, Enum):
 class FulfillmentStatusEnum(str, Enum):
     pending_pickup = "pending_pickup"
     ready_for_pickup = "ready_for_pickup"
+    ready_for_dispatch = "ready_for_dispatch"
+    dispatched = "dispatched"
     collected = "collected"
+    delivered = "delivered"
     expired = "expired"
     cancelled = "cancelled"
 
 
+class DeliveryTypeEnum(str, Enum):
+    store_pickup = "RETIRO_TIENDA"
+    home_delivery = "ENVIO_DOMICILIO"
+
+
 class CashCheckoutCreate(BaseModel):
     cash_reference: str | None = None
+    delivery_type: str = "RETIRO_TIENDA"
+    shipping_address: str | None = None
 
 
 class StripeCheckoutCreate(BaseModel):
     currency: str | None = None
+    delivery_type: str = "RETIRO_TIENDA"
+    shipping_address: str | None = None
 
 
 class OrderItemRead(BaseModel):
     id: UUID
     order_id: UUID
+    tenant_id: UUID | None = None
     variant_id: UUID
     reservation_id: UUID | None = None
     quantity: int
@@ -65,6 +78,7 @@ class OrderItemRead(BaseModel):
 
 class OrderRead(BaseModel):
     id: UUID
+    tenant_id: UUID | None = None
     user_id: UUID
     status: OrderStatusEnum
     payment_method: PaymentMethodEnum
@@ -75,6 +89,11 @@ class OrderRead(BaseModel):
     pickup_expires_at: datetime | None = None
     pickup_code: str | None = None
     fulfillment_status: FulfillmentStatusEnum | None = None
+    delivery_type: str = "RETIRO_TIENDA"
+    shipping_address: str | None = None
+    tracking_number: str | None = None
+    dispatched_at: datetime | None = None
+    dispatched_by: UUID | None = None
     subtotal: Decimal
     discount_amount: Decimal
     promotion_code_id: UUID | None = None
@@ -85,3 +104,18 @@ class OrderRead(BaseModel):
     items: list[OrderItemRead] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
+
+
+class OrderDispatchRequest(BaseModel):
+    shipping_notes: str | None = None
+
+
+class OrderDispatchResponse(BaseModel):
+    order_id: UUID
+    tenant_id: UUID | None = None
+    tracking_number: str
+    delivery_type: str
+    fulfillment_status: str
+    dispatched_at: datetime
+    dispatched_by: UUID | None = None
+    message: str

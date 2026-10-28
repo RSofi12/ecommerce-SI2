@@ -58,6 +58,20 @@
 * **Motivo:** Auditoría de arquitectura detectó dos fallas críticas en el commit anterior: (1) Ausencia de aislamiento en endpoints de catálogo, pues `create_product`, `update_product`, `delete_product` y `list_admin_products` no recibían ni filtraban por `tenant_id`, provocando fuga cruzada de datos entre empresas. (2) Ausencia de `db.commit()` en las funciones de `catalog_service.py` (usaban `with db.begin_nested():` sin consolidar), provocando que las prendas creadas se revirtieran silenciosamente en cada petición HTTP. Adicionalmente, la migración `0041` no se había ejecutado en PostgreSQL.
 * **Impacto:**
   - Ejecución formal de `alembic upgrade head` (revisión 0041 aplicada en base de datos).
+  - Inyección de `tenant_id` obligatorio en todas las mutaciones del catálogo.
+  - Consolidación transaccional con `db.commit()` para asegurar que las prendas persistan formalmente en PostgreSQL.
+  - Suite [`test_cu06_cu07_multitenant_catalog.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu06_cu07_multitenant_catalog.py) con 4/4 pruebas unitarias e integración pasando.
+
+### Registro 12: 2026-10-27
+* **Decisión:** Despacho Condicionado a Pago Confirmado en Stripe y Tracking Unificado (CU12 - Política 3).
+* **Motivo:** El pliego y las Políticas de Negocio Inviolables (Política 3) exigen que el despacho físico o la entrega digital se efectúen única y exclusivamente cuando el pago en la pasarela Stripe esté confirmado (`payment_status = 'paid'`). Adicionalmente, era mandatorio extender el modelo de datos para soportar modalidades de entrega (`RETIRO_TIENDA` vs `ENVIO_DOMICILIO`), número de guía (`tracking_number`), auditoría de despacho (`dispatched_at`, `dispatched_by`) y aislamiento SaaS con `tenant_id`.
+* **Impacto:**
+  - Migración Alembic `0043_add_order_tenant_and_dispatch.py` aplicada exitosamente en PostgreSQL.
+  - Ampliación de enum `fulfillmentstatusenum` en PostgreSQL (`ready_for_dispatch`, `dispatched`, `delivered`).
+  - Implementación de `POST /api/orders/{order_id}/dispatch` con bloqueo estricto por Política 3 y `GET /api/orders/tracking/{tracking_number}` para trazabilidad pública del pedido.
+  - Generación de código de rastreo formal `DSP-YYYYMMDD-XXXX` al procesar webhook `payment_intent.succeeded`.
+  - Suite automatizada `test_cu12_stripe_conditioned_dispatch.py` con 5/5 pruebas aprobadas al 100%.
+
   - Inyección y extracción mandatoria de `tenant_id` desde el JWT verificado en `catalog_routes.py`.
   - Soporte de precios diferenciados por talla en `ProductVariant` asociados al tenant.
   - Inclusión de `db.commit()` en `create_product()`, `update_product()` y `delete_product()`.

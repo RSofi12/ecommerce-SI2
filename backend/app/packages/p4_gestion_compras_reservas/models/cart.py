@@ -1,18 +1,20 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Numeric, Integer
+from sqlalchemy import Column, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
 from app.packages.p4_gestion_compras_reservas.schemas.cart_schema import CartStatusEnum
+from app.packages.p0_saas_plataforma.models.company import Company  # noqa: F401
 
 
 class Cart(Base):
     __tablename__ = "carts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True, index=True)
     promotion_code_id = Column(UUID(as_uuid=True), ForeignKey("promotion_codes.id"), nullable=True, index=True)
     status = Column(SQLAlchemyEnum(CartStatusEnum, name="cartstatusenum"), nullable=False, default=CartStatusEnum.active)
@@ -23,3 +25,4 @@ class Cart(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
 
     items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
+    company = relationship("Company", foreign_keys=[tenant_id])
