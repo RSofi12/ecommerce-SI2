@@ -52,6 +52,9 @@ enum PaymentStatus {
 enum FulfillmentStatus {
   pendingPickup('pending_pickup'),
   readyForPickup('ready_for_pickup'),
+  readyForDispatch('ready_for_dispatch'),
+  dispatched('dispatched'),
+  delivered('delivered'),
   collected('collected'),
   expired('expired'),
   cancelled('cancelled');
@@ -64,6 +67,22 @@ enum FulfillmentStatus {
     return values.firstWhere(
       (status) => status.value == value?.toString(),
       orElse: () => FulfillmentStatus.pendingPickup,
+    );
+  }
+}
+
+enum DeliveryType {
+  storePickup('RETIRO_TIENDA'),
+  homeDelivery('ENVIO_DOMICILIO');
+
+  const DeliveryType(this.value);
+
+  final String value;
+
+  static DeliveryType fromJson(Object? value) {
+    return values.firstWhere(
+      (type) => type.value == value?.toString(),
+      orElse: () => DeliveryType.storePickup,
     );
   }
 }
@@ -135,6 +154,11 @@ class Order {
     this.pickupExpiresAt,
     this.pickupCode,
     this.updatedAt,
+    this.deliveryType = 'RETIRO_TIENDA',
+    this.shippingAddress,
+    this.trackingNumber,
+    this.dispatchedAt,
+    this.dispatchedBy,
   });
 
   final String id;
@@ -154,6 +178,11 @@ class Order {
   final String? pickupBranchId;
   final DateTime? pickupExpiresAt;
   final String? pickupCode;
+  final String deliveryType;
+  final String? shippingAddress;
+  final String? trackingNumber;
+  final DateTime? dispatchedAt;
+  final String? dispatchedBy;
   final List<OrderItem> items;
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -180,6 +209,11 @@ class Order {
       pickupBranchId: _optionalString(json, 'pickup_branch_id'),
       pickupExpiresAt: _optionalDateTime(json, 'pickup_expires_at'),
       pickupCode: _optionalString(json, 'pickup_code'),
+      deliveryType: _optionalString(json, 'delivery_type') ?? 'RETIRO_TIENDA',
+      shippingAddress: _optionalString(json, 'shipping_address'),
+      trackingNumber: _optionalString(json, 'tracking_number'),
+      dispatchedAt: _optionalDateTime(json, 'dispatched_at'),
+      dispatchedBy: _optionalString(json, 'dispatched_by'),
       items: rawItems
           .map((item) {
             if (item is! Map) {
@@ -223,17 +257,29 @@ class StripeCheckout {
     required this.orderId,
     required this.clientSecret,
     required this.paymentIntentId,
+    this.deliveryType,
+    this.shippingAddress,
+    this.trackingNumber,
+    this.pickupExpiresAt,
   });
 
   final String orderId;
   final String clientSecret;
   final String paymentIntentId;
+  final String? deliveryType;
+  final String? shippingAddress;
+  final String? trackingNumber;
+  final DateTime? pickupExpiresAt;
 
   factory StripeCheckout.fromJson(Map<String, dynamic> json) {
     return StripeCheckout(
       orderId: _requiredString(json, 'order_id'),
       clientSecret: _requiredString(json, 'client_secret'),
       paymentIntentId: _requiredString(json, 'payment_intent_id'),
+      deliveryType: _optionalString(json, 'delivery_type'),
+      shippingAddress: _optionalString(json, 'shipping_address'),
+      trackingNumber: _optionalString(json, 'tracking_number'),
+      pickupExpiresAt: _optionalDateTime(json, 'pickup_expires_at'),
     );
   }
 }

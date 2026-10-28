@@ -28,6 +28,16 @@ void main() {
     expect(result?.checkout.orderId, 'order-id');
     expect(controller.status, OrderControllerStatus.ready);
   });
+
+  test('CU12: rastrea pedido por código de guía', () async {
+    final controller = OrderController(api: _FakeOrderApi());
+
+    final order = await controller.trackOrder('DSP-20261028-0001');
+
+    expect(order?.id, 'tracked-order');
+    expect(controller.selectedOrder?.id, 'tracked-order');
+    expect(controller.status, OrderControllerStatus.ready);
+  });
 }
 
 class _FakeOrderApi extends OrderApi {
@@ -55,7 +65,11 @@ class _FakeOrderApi extends OrderApi {
   }
 
   @override
-  Future<OrderResult> checkoutCash({required String pickupBranchId}) async {
+  Future<OrderResult> checkoutCash({
+    String? pickupBranchId,
+    String deliveryType = 'RETIRO_TIENDA',
+    String? shippingAddress,
+  }) async {
     return OrderResult(
       order: _order('created-order'),
       message: 'Pago en efectivo procesado exitosamente',
@@ -79,6 +93,14 @@ class _FakeOrderApi extends OrderApi {
         paymentIntentId: 'intent-id',
       ),
       message: 'Pago con Stripe iniciado exitosamente',
+    );
+  }
+
+  @override
+  Future<OrderResult> trackOrder({required String trackingNumber}) async {
+    return OrderResult(
+      order: _order('tracked-order'),
+      message: 'Pedido localizado',
     );
   }
 }

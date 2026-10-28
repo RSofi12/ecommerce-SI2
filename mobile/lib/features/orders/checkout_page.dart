@@ -36,9 +36,11 @@ class CheckoutPage extends StatefulWidget {
 class _CheckoutPageState extends State<CheckoutPage> {
   late final OrderController _controller;
   late final bool _ownsController;
+  final TextEditingController _shippingAddressController = TextEditingController();
   String? _loadedToken;
   String? _pickupBranchId;
-  PaymentMethod _paymentMethod = PaymentMethod.cash;
+  DeliveryType _deliveryType = DeliveryType.homeDelivery;
+  PaymentMethod _paymentMethod = PaymentMethod.stripe;
 
   bool get _isOrderPayment => widget.orderId != null;
 
@@ -56,6 +58,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void dispose() {
     widget.authController.removeListener(_handleAuthChanged);
+    _shippingAddressController.dispose();
     if (_ownsController) _controller.dispose();
     super.dispose();
   }
@@ -144,8 +147,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         AppSectionTitle(
           title: _isOrderPayment ? 'Finalizar pedido' : 'Finalizar compra',
           subtitle: _isOrderPayment
-              ? 'Completa el pago para continuar con la preparación.'
-              : 'Elige dónde retirarás tu pedido y cómo pagarás.',
+              ? 'Completa el pago para continuar con el despacho.'
+              : 'Elige modalidad de entrega y método de pago (CU12).',
         ),
         const SizedBox(height: 16),
         if (order != null) ...[
@@ -169,61 +172,136 @@ class _CheckoutPageState extends State<CheckoutPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!_isOrderPayment) ...[
-            DropdownButtonFormField<String>(
-              isExpanded: true,
-              initialValue: pickupBranchId,
-              decoration: const InputDecoration(
-                labelText: 'Sucursal de retiro',
-              ),
-              hint: const Text('Selecciona una sucursal'),
-              items: branches
-                  .map(
-                    (branch) => DropdownMenuItem(
-                      value: branch.id,
-                      child: Text(
-                        '${branch.name} · ${branch.city}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: isSaving
-                  ? null
-                  : (value) => setState(() => _pickupBranchId = value),
+            Text(
+              '1. Modalidad de Entrega',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<PaymentMethod>(
+            const SizedBox(height: 8),
+            DropdownButtonFormField<DeliveryType>(
               isExpanded: true,
-              initialValue: _paymentMethod,
-              decoration: const InputDecoration(labelText: 'Método de pago'),
+              value: _deliveryType,
+              decoration: const InputDecoration(labelText: 'Tipo de entrega'),
               items: const [
                 DropdownMenuItem(
-                  value: PaymentMethod.cash,
-                  child: Text('Efectivo al retirar'),
+                  value: DeliveryType.homeDelivery,
+                  child: Text('🚚 Envío a domicilio'),
                 ),
                 DropdownMenuItem(
-                  value: PaymentMethod.stripe,
-                  child: Text('Tarjeta'),
+                  value: DeliveryType.storePickup,
+                  child: Text('🏪 Retiro en sucursal'),
                 ),
               ],
               onChanged: isSaving
                   ? null
-                  : (value) => setState(() => _paymentMethod = value!),
+                  : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _deliveryType = value;
+                        if (_deliveryType == DeliveryType.homeDelivery) {
+                          _paymentMethod = PaymentMethod.stripe;
+                        }
+                      });
+                    },
             ),
             const SizedBox(height: 12),
+            if (_deliveryType == DeliveryType.homeDelivery) ...[
+              TextField(
+                controller: _shippingAddressController,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección de envío *',
+                  hintText: 'Zona, calle, número y referencias para el despacho',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.blue.shade800),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Política 3: Los despachos se procesan previa confirmación de pago con Stripe.',
+                        style: TextStyle(fontSize: 11, color: Colors.blue.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_deliveryType == DeliveryType.storePickup) ...[
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: pickupBranchId,
+                decoration: const InputDecoration(
+                  labelText: 'Sucursal de retiro *',
+                ),
+                hint: const Text('Selecciona una sucursal'),
+                items: branches
+                    .map(
+                      (branch) => DropdownMenuItem(
+                        value: branch.id,
+                        child: Text(
+                          '${branch.name} · ${branch.city}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: isSaving
+                    ? null
+                    : (value) => setState(() => _pickupBranchId = value),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Text(
+              '2. Método de Pago',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<PaymentMethod>(
+              isExpanded: true,
+              value: _paymentMethod,
+              decoration: const InputDecoration(labelText: 'Método de pago'),
+              items: [
+                if (_deliveryType == DeliveryType.storePickup)
+                  const DropdownMenuItem(
+                    value: PaymentMethod.cash,
+                    child: Text('Efectivo al retirar en tienda'),
+                  ),
+                const DropdownMenuItem(
+                  value: PaymentMethod.stripe,
+                  child: Text('Tarjeta de débito / crédito (Stripe)'),
+                ),
+              ],
+              onChanged: isSaving || _deliveryType == DeliveryType.homeDelivery
+                  ? null
+                  : (value) => setState(() => _paymentMethod = value!),
+            ),
+            const SizedBox(height: 16),
           ],
           AppButton(
             label: _isOrderPayment || _paymentMethod == PaymentMethod.stripe
-                ? 'Pagar con tarjeta'
-                : 'Comprar con efectivo',
+                ? 'Pagar con Stripe'
+                : 'Confirmar retiro en tienda',
             icon: Icon(
               _isOrderPayment || _paymentMethod == PaymentMethod.stripe
                   ? Icons.credit_card_outlined
-                  : Icons.payments_outlined,
+                  : Icons.storefront_outlined,
             ),
-            onPressed: isSaving || (!_isOrderPayment && pickupBranchId == null)
-                ? null
-                : () => _submit(pickupBranchId),
+            onPressed: isSaving ? null : () => _submit(pickupBranchId),
             isLoading: isSaving,
             expand: true,
           ),
@@ -246,17 +324,48 @@ class _CheckoutPageState extends State<CheckoutPage> {
       await _checkoutStripe();
       return;
     }
-    if (pickupBranchId == null) return;
-    if (_paymentMethod == PaymentMethod.stripe) {
-      await _checkoutStripe(pickupBranchId: pickupBranchId);
+
+    if (_deliveryType == DeliveryType.homeDelivery) {
+      final address = _shippingAddressController.text.trim();
+      if (address.isEmpty) {
+        AppSnackBar.show(
+          context,
+          'Ingresa la dirección para el envío de prendas.',
+          tone: AppSnackBarTone.error,
+        );
+        return;
+      }
+      await _checkoutStripe(
+        deliveryType: 'ENVIO_DOMICILIO',
+        shippingAddress: address,
+      );
       return;
     }
+
+    // Retiro en sucursal
+    if (pickupBranchId == null) {
+      AppSnackBar.show(
+        context,
+        'Selecciona una sucursal para el retiro.',
+        tone: AppSnackBarTone.error,
+      );
+      return;
+    }
+
+    if (_paymentMethod == PaymentMethod.stripe) {
+      await _checkoutStripe(
+        pickupBranchId: pickupBranchId,
+        deliveryType: 'RETIRO_TIENDA',
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar compra'),
+        title: const Text('Confirmar compra en tienda'),
         content: const Text(
-          'Se creará un pedido con los productos del carrito.',
+          'Se creará el pedido para retiro en sucursal con pago en efectivo.',
         ),
         actions: [
           TextButton(
@@ -271,7 +380,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ),
     );
     if (confirmed != true) return;
-    await _controller.checkoutCash(pickupBranchId: pickupBranchId);
+    await _controller.checkoutCash(
+      pickupBranchId: pickupBranchId,
+      deliveryType: 'RETIRO_TIENDA',
+    );
     if (!mounted) return;
     _showControllerFeedback();
     if (_controller.status == OrderControllerStatus.error ||
@@ -284,7 +396,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Future<void> _checkoutStripe({String? pickupBranchId}) async {
+  Future<void> _checkoutStripe({
+    String? pickupBranchId,
+    String deliveryType = 'ENVIO_DOMICILIO',
+    String? shippingAddress,
+  }) async {
     if (AppConfig.stripePublishableKey.isEmpty) {
       AppSnackBar.show(
         context,
@@ -296,12 +412,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final result = _isOrderPayment
         ? await _controller.payOrder(orderId: widget.orderId!)
-        : await _controller.checkoutStripe(pickupBranchId: pickupBranchId!);
+        : await _controller.checkoutStripe(
+            pickupBranchId: pickupBranchId,
+            deliveryType: deliveryType,
+            shippingAddress: shippingAddress,
+          );
     if (!mounted) return;
     if (result == null) {
       AppSnackBar.show(
         context,
-        _controller.errorMessage ?? 'No se pudo iniciar el pago.',
+        _controller.errorMessage ?? 'No se pudo iniciar el pago con Stripe.',
         tone: AppSnackBarTone.error,
       );
       return;
@@ -315,6 +435,31 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
       );
       await Stripe.instance.presentPaymentSheet();
+      if (!mounted) return;
+
+      // Mensaje de éxito con número de guía si aplica
+      final tracking = result.checkout.trackingNumber;
+      if (tracking != null && tracking.isNotEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+            title: const Text('¡Compra y Pago Confirmados!'),
+            content: Text(
+              'Tu pago ha sido validado exitosamente en Stripe.\n\n'
+              'Guía de Despacho Asignada:\n$tracking\n\n'
+              'Podrás rastrear la línea de vida de tu pedido desde la sección de pedidos.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      }
+
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(
         AppRoutes.orders,

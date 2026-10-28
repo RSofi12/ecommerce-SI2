@@ -66,13 +66,21 @@ class OrderController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkoutCash({required String pickupBranchId}) async {
+  Future<void> checkoutCash({
+    String? pickupBranchId,
+    String deliveryType = 'RETIRO_TIENDA',
+    String? shippingAddress,
+  }) async {
     status = OrderControllerStatus.saving;
     errorMessage = null;
     feedbackMessage = null;
     notifyListeners();
     try {
-      final result = await _api.checkoutCash(pickupBranchId: pickupBranchId);
+      final result = await _api.checkoutCash(
+        pickupBranchId: pickupBranchId,
+        deliveryType: deliveryType,
+        shippingAddress: shippingAddress,
+      );
       orders = [result.order, ...orders];
       selectedOrder = result.order;
       feedbackMessage = result.message;
@@ -85,18 +93,42 @@ class OrderController extends ChangeNotifier {
   }
 
   Future<StripeCheckoutResult?> checkoutStripe({
-    required String pickupBranchId,
+    String? pickupBranchId,
+    String deliveryType = 'ENVIO_DOMICILIO',
+    String? shippingAddress,
   }) async {
     status = OrderControllerStatus.saving;
     errorMessage = null;
     feedbackMessage = null;
     notifyListeners();
     try {
-      final result = await _api.checkoutStripe(pickupBranchId: pickupBranchId);
+      final result = await _api.checkoutStripe(
+        pickupBranchId: pickupBranchId,
+        deliveryType: deliveryType,
+        shippingAddress: shippingAddress,
+      );
       feedbackMessage = result.message;
       status = OrderControllerStatus.ready;
       notifyListeners();
       return result;
+    } catch (error) {
+      status = OrderControllerStatus.error;
+      errorMessage = _messageFor(error);
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<Order?> trackOrder(String trackingNumber) async {
+    status = OrderControllerStatus.loading;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      final result = await _api.trackOrder(trackingNumber: trackingNumber);
+      selectedOrder = result.order;
+      status = OrderControllerStatus.ready;
+      notifyListeners();
+      return result.order;
     } catch (error) {
       status = OrderControllerStatus.error;
       errorMessage = _messageFor(error);

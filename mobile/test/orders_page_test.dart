@@ -14,7 +14,7 @@ import 'package:mobile/features/orders/orders_page.dart';
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
-  testWidgets('carga pedidos y muestra el detalle con pago pendiente', (
+  testWidgets('carga pedidos y muestra el detalle con línea de vida CU12', (
     tester,
   ) async {
     final authController = AuthController(api: _FakeAuthApi());
@@ -41,12 +41,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mis pedidos'), findsOneWidget);
-    await tester.tap(find.textContaining('Pedido order-12'));
+    await tester.tap(find.textContaining('Pedido #order-12'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pago: Pendiente'), findsOneWidget);
-    expect(find.text('Pedido: Pendiente'), findsOneWidget);
-    expect(find.text('Bs 120.00'), findsOneWidget);
+    expect(find.text('Pendiente de pago'), findsWidgets);
+    expect(find.text('Línea de Vida y Seguimiento (CU12)'), findsOneWidget);
+    expect(find.text('Bs 120.00'), findsWidgets);
   });
 }
 
@@ -61,7 +61,7 @@ class _FakeOrderApi extends OrderApi {
   _FakeOrderApi() : super();
 
   @override
-  Future<OrderListResult> getMine() async => const OrderListResult(
+  Future<OrderListResult> getMine() async => OrderListResult(
     orders: [_order],
     message: 'Pedidos obtenidos exitosamente',
   );
@@ -71,10 +71,10 @@ class _FakeOrderApi extends OrderApi {
 
   @override
   Future<OrderResult> getById({required String orderId}) async =>
-      const OrderResult(order: _order, message: 'Pedido obtenido exitosamente');
+      OrderResult(order: _order, message: 'Pedido obtenido exitosamente');
 }
 
-const _order = Order(
+final _order = Order(
   id: 'order-12345678',
   userId: 'user-id',
   status: OrderStatus.pending,

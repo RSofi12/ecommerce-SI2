@@ -33,21 +33,35 @@ class OrderApi {
     return response.data ?? const [];
   }
 
-  Future<OrderResult> checkoutCash({required String pickupBranchId}) async {
+  Future<OrderResult> checkoutCash({
+    String? pickupBranchId,
+    String deliveryType = 'RETIRO_TIENDA',
+    String? shippingAddress,
+  }) async {
     final response = await _client.post<Order>(
       'payments/cash/checkout',
-      data: {'pickup_branch_id': pickupBranchId},
+      data: {
+        if (pickupBranchId != null) 'pickup_branch_id': pickupBranchId,
+        'delivery_type': deliveryType,
+        if (shippingAddress != null) 'shipping_address': shippingAddress,
+      },
       parser: _parseOrder,
     );
     return _orderResult(response.data, response.message);
   }
 
   Future<StripeCheckoutResult> checkoutStripe({
-    required String pickupBranchId,
+    String? pickupBranchId,
+    String deliveryType = 'ENVIO_DOMICILIO',
+    String? shippingAddress,
   }) async {
     final response = await _client.post<StripeCheckout>(
       'payments/stripe/checkout',
-      data: {'pickup_branch_id': pickupBranchId},
+      data: {
+        if (pickupBranchId != null) 'pickup_branch_id': pickupBranchId,
+        'delivery_type': deliveryType,
+        if (shippingAddress != null) 'shipping_address': shippingAddress,
+      },
       parser: _parseStripeCheckout,
     );
     final checkout = response.data;
@@ -55,6 +69,14 @@ class OrderApi {
       throw const FormatException('La respuesta de Stripe está vacía');
     }
     return StripeCheckoutResult(checkout: checkout, message: response.message);
+  }
+
+  Future<OrderResult> trackOrder({required String trackingNumber}) async {
+    final response = await _client.get<Order>(
+      'orders/tracking/',
+      parser: _parseOrder,
+    );
+    return _orderResult(response.data, response.message);
   }
 
   Future<StripeCheckoutResult> payOrder({required String orderId}) async {
