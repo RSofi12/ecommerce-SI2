@@ -1,8 +1,29 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideAlertCircle,
+  lucideCalendar,
+  lucideCheck,
+  lucideCheckCircle2,
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideClock,
+  lucideCopy,
+  lucideExternalLink,
+  lucideMapPin,
+  lucidePlus,
+  lucideRefreshCw,
+  lucideSearch,
+  lucideShoppingCart,
+  lucideTicket,
+  lucideTrash2,
+  lucideWifiOff,
+  lucideX,
+} from '@ng-icons/lucide';
 
 import { toast } from '@spartan-ng/brain/sonner';
 
@@ -22,23 +43,57 @@ import {
   CatalogProduct,
   CatalogProductVariant,
 } from '../../shared/models/catalog.model';
-import { CreateReservationRequest } from '../../shared/models/reservation.model';
+import { CreateReservationRequest, Reservation } from '../../shared/models/reservation.model';
 import { CatalogApiService } from '../../shared/services/catalog-api.service';
 import { ReservationApiService } from '../../shared/services/reservation-api.service';
-import { VirtualTryOnComponent } from '../../shared/components/virtual-try-on.component';
-import { DetectorRopaComponent } from '../../shared/components/detector-ropa.component';
-import { DetectorMediapipeComponent } from '../../shared/components/detector-mediapipe.component';
+import { NetworkStatusService } from '../../../core/offline/network-status.service';
+import { IdbReservationsService, PendingReservationItem } from '../../../core/offline/idb-reservations.service';
 
 @Component({
   selector: 'app-reservations-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, HlmButton, HlmInput, ...HlmBadgeImports, ...HlmCardImports, ...HlmFieldImports, ...HlmSelectImports],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    NgIcon,
+    HlmButton,
+    HlmInput,
+    ...HlmBadgeImports,
+    ...HlmCardImports,
+    ...HlmFieldImports,
+    ...HlmSelectImports,
+  ],
+  providers: [
+    provideIcons({
+      lucideAlertCircle,
+      lucideCalendar,
+      lucideCheck,
+      lucideCheckCircle2,
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideClock,
+      lucideCopy,
+      lucideExternalLink,
+      lucideMapPin,
+      lucidePlus,
+      lucideRefreshCw,
+      lucideSearch,
+      lucideShoppingCart,
+      lucideTicket,
+      lucideTrash2,
+      lucideWifiOff,
+      lucideX,
+    }),
+  ],
   templateUrl: './reservations-page.component.html',
 })
 export class ReservationsPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly catalogApi = inject(CatalogApiService);
   private readonly reservationApi = inject(ReservationApiService);
+  protected readonly networkStatus = inject(NetworkStatusService);
+  private readonly idbReservations = inject(IdbReservationsService);
 
   protected readonly branches = signal<CatalogBranch[]>([]);
   protected readonly categories = signal<CatalogNameItem[]>([]);
@@ -53,6 +108,14 @@ export class ReservationsPageComponent {
   protected readonly loading = signal(false);
   protected readonly submitting = signal(false);
 
+  // Modal / Confirmación de reserva
+  protected readonly lastCreatedReservation = signal<Reservation | null>(null);
+
+  protected readonly todayIso = new Date().toISOString().split('T')[0];
+  protected readonly maxDateIso = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  protected readonly isOffline = computed(() => !this.networkStatus.effectiveOnline());
+
   protected readonly form = this.fb.nonNullable.group({
     q: [''],
     branch_id: [''],
@@ -61,7 +124,7 @@ export class ReservationsPageComponent {
     color_id: [''],
     season_id: [''],
     collection_id: [''],
-    visit_date: [''],
+    visit_date: [this.todayIso],
   });
 
   constructor() {
@@ -69,42 +132,42 @@ export class ReservationsPageComponent {
   }
 
   protected branchSelectLabel = (branchId: string | null | undefined): string => {
-    if (!branchId) return 'Sucursal';
+    if (!branchId) return 'Seleccionar sucursal';
     const branch = this.branches().find((item) => item.id === branchId);
     return branch ? `${branch.name} - ${branch.city}` : branchId;
   };
 
   protected readonly categorySelectLabel = (categoryId: string | null | undefined): string => {
-    if (!categoryId) return 'Categoría';
+    if (!categoryId) return 'Todas las categorías';
     return this.categories().find((category) => category.id === categoryId)?.name ?? categoryId;
   };
 
   protected readonly sizeSelectLabel = (sizeId: string | null | undefined): string => {
-    if (!sizeId) return 'Talla';
+    if (!sizeId) return 'Todas las tallas';
     return this.sizes().find((size) => size.id === sizeId)?.name ?? sizeId;
   };
 
   protected readonly colorSelectLabel = (colorId: string | null | undefined): string => {
-    if (!colorId) return 'Color';
+    if (!colorId) return 'Todos los colores';
     return this.colors().find((color) => color.id === colorId)?.name ?? colorId;
   };
 
   protected readonly seasonSelectLabel = (seasonId: string | null | undefined): string => {
-    if (!seasonId) return 'Temporada';
+    if (!seasonId) return 'Todas las temporadas';
     return this.seasons().find((season) => season.id === seasonId)?.name ?? seasonId;
   };
 
   protected readonly collectionSelectLabel = (collectionId: string | null | undefined): string => {
-    if (!collectionId) return 'Colección';
+    if (!collectionId) return 'Todas las colecciones';
     const collection = this.collections().find((item) => item.id === collectionId);
     return collection ? `${collection.name} - ${this.seasonName(collection.season_id)}` : collectionId;
   };
 
   protected variantSelectLabel(product: CatalogProduct): (variantId: string | null | undefined) => string {
     return (variantId: string | null | undefined): string => {
-      if (!variantId) return 'Variante';
+      if (!variantId) return 'Seleccionar variante';
       const variant = this.productVariants(product).find((item) => item.id === variantId);
-      return variant ? `${this.variantLabel(variant)} - ${variant.price}` : variantId;
+      return variant ? `${this.variantLabel(variant)} · Bs ${variant.price}` : variantId;
     };
   }
 
@@ -183,9 +246,10 @@ export class ReservationsPageComponent {
   }
 
   protected availabilityLabel(variant: CatalogProductVariant | null, branchId: string | null): string {
-    if (!branchId) return 'Selecciona una sucursal para ver stock';
+    if (!branchId) return 'Selecciona una sucursal para ver disponibilidad';
     if (!variant) return 'Sin variante seleccionada';
-    return `${variant.branch_quantity ?? 0} unidades`;
+    const quantity = variant.branch_quantity ?? 0;
+    return quantity > 0 ? `${quantity} unidades disponibles` : 'Sin existencias en esta sede';
   }
 
   protected productImages(product: CatalogProduct): string[] {
@@ -218,7 +282,7 @@ export class ReservationsPageComponent {
   }
 
   protected branchName(branchId: string | null | undefined): string {
-    return this.branches().find((branch) => branch.id === branchId)?.name ?? 'Sin sucursal';
+    return this.branches().find((branch) => branch.id === branchId)?.name ?? 'Sin sucursal seleccionada';
   }
 
   protected draftQuantity(product: CatalogProduct): number {
@@ -239,11 +303,11 @@ export class ReservationsPageComponent {
     if (!variant) return;
     const quantity = this.draftQuantity(product);
     this.draftByVariant.update((current) => ({ ...current, [variant.id]: (current[variant.id] ?? 0) + quantity }));
-    toast.success('Variante agregada a la reserva.');
+    toast.success(`Agregado a la reserva: ${product.name} (${this.variantLabel(variant)}) x${quantity}`);
   }
 
-  protected draftItems(): Array<{ variant_id: string; quantity: number; product_name: string; variant_sku: string; variant_label: string }> {
-    const items = new Map<string, { variant_id: string; quantity: number; product_name: string; variant_sku: string; variant_label: string }>();
+  protected draftItems(): Array<{ variant_id: string; quantity: number; product_name: string; variant_sku: string; variant_label: string; unit_price: string }> {
+    const items = new Map<string, { variant_id: string; quantity: number; product_name: string; variant_sku: string; variant_label: string; unit_price: string }>();
     for (const product of this.products()) {
       for (const variant of product.variants ?? []) {
         const quantity = this.draftByVariant()[variant.id] ?? 0;
@@ -254,6 +318,7 @@ export class ReservationsPageComponent {
           product_name: product.name,
           variant_sku: variant.sku,
           variant_label: this.variantLabel(variant),
+          unit_price: String(variant.price),
         });
       }
     }
@@ -273,10 +338,7 @@ export class ReservationsPageComponent {
   }
 
   protected draftTotal(): number {
-    return this.draftItems().reduce((sum, item) => {
-      const variant = this.findVariant(item.variant_id);
-      return sum + (variant ? Number(variant.price) * item.quantity : 0);
-    }, 0);
+    return this.draftItems().reduce((sum, item) => sum + Number(item.unit_price) * item.quantity, 0);
   }
 
   protected canSubmit(): boolean {
@@ -285,29 +347,88 @@ export class ReservationsPageComponent {
 
   protected async submitReservation(): Promise<void> {
     if (!this.canSubmit()) {
-      toast.warning('Completa la sucursal, la fecha y agrega al menos una variante.');
+      toast.warning('Selecciona la sucursal, la fecha de visita y al menos una variante.');
+      return;
+    }
+
+    const value = this.form.getRawValue();
+    const branch = this.branches().find((b) => b.id === value.branch_id);
+    const draftItems = this.draftItems();
+    const items = draftItems.map((item) => ({ variant_id: item.variant_id, quantity: item.quantity }));
+    const client_reservation_id = crypto.randomUUID();
+
+    const payload: CreateReservationRequest = {
+      branch_id: value.branch_id,
+      visit_date: value.visit_date,
+      items,
+      client_reservation_id,
+    };
+
+    // Operación en contingencia offline (PWA)
+    if (!this.networkStatus.effectiveOnline()) {
+      const pendingItem: PendingReservationItem = {
+        client_reservation_id,
+        payload,
+        branch_name: branch ? `${branch.name} - ${branch.city}` : 'Sucursal seleccionada',
+        items_summary: draftItems.map((i) => `${i.product_name} (${i.variant_label}) x${i.quantity}`).join(', '),
+        total_estimated: this.draftTotal(),
+        created_at: new Date().toISOString(),
+        synced: false,
+      };
+      this.idbReservations.savePending(pendingItem);
+
+      this.lastCreatedReservation.set({
+        id: client_reservation_id,
+        branch_id: value.branch_id,
+        branch_name: branch ? `${branch.name} - ${branch.city}` : 'Sucursal seleccionada',
+        user_id: '',
+        user_name: 'Cliente',
+        visit_date: value.visit_date,
+        expires_at: value.visit_date,
+        status: 'pending',
+        total_amount: this.draftTotal().toFixed(2),
+        item_count: this.draftCount(),
+        reservation_code: `OFFLINE-${client_reservation_id.substring(0, 6).toUpperCase()}`,
+        qr_payload: `FS-RES:${client_reservation_id}`,
+        created_at: new Date().toISOString(),
+        updated_at: null,
+        items: [],
+      });
+
+      this.draftByVariant.set({});
+      toast.info('Reserva registrada localmente (Modo Desconectado). Se sincronizará al volver la red.');
       return;
     }
 
     this.submitting.set(true);
     try {
-      const value = this.form.getRawValue();
-      const payload: CreateReservationRequest = {
-        branch_id: value.branch_id,
-        visit_date: value.visit_date,
-        items: this.draftItems().map((item) => ({ variant_id: item.variant_id, quantity: item.quantity })),
-      };
       const response = await requestWithToast(
         this.reservationApi.createReservation(payload),
-        { loading: 'Creando reserva...', success: 'Reserva creada correctamente.', error: 'No se pudo crear la reserva.' },
+        {
+          loading: 'Bloqueando existencias y confirmando reserva...',
+          success: '¡Reserva de prendas confirmada exitosamente!',
+          error: 'No se pudo crear la reserva. Verifica el stock.',
+        },
       );
+      if (response.data) {
+        this.lastCreatedReservation.set(response.data);
+      }
       this.draftByVariant.set({});
-      this.form.patchValue({ visit_date: '' });
     } catch {
-      // toast handled by requestWithToast
+      // Toast handled by requestWithToast.
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  protected copyCode(code: string | undefined): void {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    toast.success('Código copiado al portapapeles');
+  }
+
+  protected closeSuccessModal(): void {
+    this.lastCreatedReservation.set(null);
   }
 
   private findVariant(variantId: string): CatalogProductVariant | null {

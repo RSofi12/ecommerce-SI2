@@ -129,9 +129,6 @@ html {
 
 body {
 	min-height: 100%;
-}
-
-body {
 	margin: 0;
 	font-family: var(--font-sans);
 	background: var(--background);
@@ -142,6 +139,25 @@ header {
 	color: var(--primary);
 }
 
+/* Sidebar Typography (Montserrat Regular - 400 y active - 600) */
+[hlmSidebarContent],
+[hlmSidebarMenu],
+[hlmSidebarMenuItem],
+[hlmSidebarFooter] {
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+[hlmSidebarMenu] a,
+[hlmSidebarMenu] button {
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.01em;
+}
+
+[hlmSidebarMenu] a[data-active="true"],
+[hlmSidebarMenu] button[data-active="true"] {
+  font-weight: 600 !important;
+}
 
 .btn-brand {
   background-color: #f8baa3;

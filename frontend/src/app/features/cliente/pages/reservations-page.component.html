@@ -1,124 +1,587 @@
-<section class="space-y-5">
-  <header>
-    <h1 class="text-2xl font-semibold">Reservas</h1>
-    <p class="text-sm text-slate-500">Consulta disponibilidad y arma tu reserva.</p>
-  </header>
-
-  <div class="grid gap-5 grid-cols-[1.5fr_1fr]">
-    <div class="space-y-5">
-      <form hlmCard class="grid gap-3 bg-white p-4 shadow-sm md:grid-cols-6" [formGroup]="form" (ngSubmit)="search()">
-        <div hlmField class="md:col-span-2">
-          <input id="reservation-search" hlmInput placeholder="Buscar producto" formControlName="q" />
-        </div>
-        <div hlmSelect formControlName="branch_id" [itemToString]="branchSelectLabel" (valueChange)="updateBranchAvailability()">
-          <hlm-select-trigger><span hlmSelectValue placeholder="Sucursal"></span></hlm-select-trigger>
-          <hlm-select-content>
-            <hlm-select-item value="">Sucursal</hlm-select-item>
-            @for (branch of branches(); track branch.id) { <hlm-select-item [value]="branch.id">{{ branch.name }} - {{ branch.city }}</hlm-select-item> }
-          </hlm-select-content>
-        </div>
-        <div hlmSelect formControlName="category_id" [itemToString]="categorySelectLabel">
-          <hlm-select-trigger><span hlmSelectValue placeholder="Categoría"></span></hlm-select-trigger>
-          <hlm-select-content>
-            <hlm-select-item value="">Categoría</hlm-select-item>
-            @for (category of categories(); track category.id) { <hlm-select-item [value]="category.id">{{ category.name }}</hlm-select-item> }
-          </hlm-select-content>
-        </div>
-        <div hlmSelect formControlName="size_id" [itemToString]="sizeSelectLabel">
-          <hlm-select-trigger><span hlmSelectValue placeholder="Talla"></span></hlm-select-trigger>
-          <hlm-select-content>
-            <hlm-select-item value="">Talla</hlm-select-item>
-            @for (size of sizes(); track size.id) { <hlm-select-item [value]="size.id">{{ size.name }}</hlm-select-item> }
-          </hlm-select-content>
-        </div>
-        <div hlmSelect formControlName="color_id" [itemToString]="colorSelectLabel">
-          <hlm-select-trigger><span hlmSelectValue placeholder="Color"></span></hlm-select-trigger>
-          <hlm-select-content>
-            <hlm-select-item value="">Color</hlm-select-item>
-            @for (color of colors(); track color.id) { <hlm-select-item [value]="color.id">{{ color.name }}</hlm-select-item> }
-          </hlm-select-content>
-        </div>
-        <div hlmSelect formControlName="season_id" [itemToString]="seasonSelectLabel">
-          <hlm-select-trigger><span hlmSelectValue placeholder="Temporada"></span></hlm-select-trigger>
-          <hlm-select-content>
-            <hlm-select-item value="">Temporada</hlm-select-item>
-            @for (season of seasons(); track season.id) { <hlm-select-item [value]="season.id">{{ season.name }}</hlm-select-item> }
-          </hlm-select-content>
-        </div>
-        <div hlmSelect formControlName="collection_id" [itemToString]="collectionSelectLabel">
-          <hlm-select-trigger><span hlmSelectValue placeholder="Colección"></span></hlm-select-trigger>
-          <hlm-select-content>
-            <hlm-select-item value="">Colección</hlm-select-item>
-            @for (collection of collections(); track collection.id) { <hlm-select-item [value]="collection.id">{{ collection.name }}</hlm-select-item> }
-          </hlm-select-content>
-        </div>
-        <button hlmBtn class="md:col-span-6" type="submit" [disabled]="loading()">{{ loading() ? 'Buscando...' : 'Buscar' }}</button>
-      </form>
-
-      <div class="grid gap-4 md:grid-cols-1 xl:grid-cols-2">
-        @for (product of products(); track product.id) {
-          <article hlmCard class="bg-white shadow-sm pt-0">
-            <div class="relative overflow-hidden rounded-t-xl border-b border-slate-200 bg-slate-100">
-              @if (productImages(product).length > 0) {
-                <img [src]="currentProductImage(product)!" [alt]="product.name" class="h-64 w-full object-cover" />
-                @if (productImages(product).length > 1) {
-                  <button type="button" hlmBtn variant="secondary" class="absolute left-3 top-1/2 -translate-y-1/2 rounded-full px-3 py-2 text-xs" (click)="previousProductImage(product.id, productImages(product).length)">‹</button>
-                  <button type="button" hlmBtn variant="secondary" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-3 py-2 text-xs" (click)="nextProductImage(product.id, productImages(product).length)">›</button>
-                  <div class="absolute bottom-3 right-3 rounded-full bg-slate-950/70 px-3 py-1 text-xs font-medium text-white">{{ currentProductImageIndex(product) + 1 }} / {{ productImages(product).length }}</div>
-                }
-              } @else { <div class="flex h-64 items-center justify-center text-sm text-slate-500">Sin imagen</div> }
-            </div>
-            <div hlmCardHeader class="space-y-2">
-              <h2 hlmCardTitle class="text-lg">{{ product.name }}</h2>
-              <p hlmCardDescription>{{ product.description ?? 'Sin descripción' }}</p>
-            </div>
-            <div hlmCardContent class="space-y-3">
-              <div class="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div class="grid gap-2 md:grid-cols-2 text-xs text-slate-500">
-                  <p>Categoría: {{ categoryName(product.category_id) }}</p><p>Colección: {{ collectionName(product.collection_id) }}</p><p>Temporada: {{ collectionSeasonName(product.collection_id) }}</p>
-                </div>
-                <div class="flex items-center justify-between text-sm">
-                  @if (selectedVariant(product); as variant) { @if (variant.original_price; as originalPrice) { <span><s class="text-slate-400">{{ originalPrice }}</s> <span class="font-medium text-emerald-700">{{ variant.price }}</span></span> } @else { <span class="font-medium">{{ variant.price }}</span> } } @else { <span class="text-slate-500">Sin precio</span> }
-                  <span hlmBadge class="bg-slate-900 text-white">{{ selectedVariant(product)?.status ?? 'active' }}</span>
-                </div>
-              </div>
-              <div hlmSelect class="w-full" [value]="selectedVariant(product)?.id" [itemToString]="variantSelectLabel(product)" (valueChange)="setSelectedVariant(product.id, $event)">
-                <hlm-select-trigger size="sm"><span hlmSelectValue placeholder="Variante"></span></hlm-select-trigger>
-                <hlm-select-content>@for (variant of productVariants(product); track variant.id) { <hlm-select-item [value]="variant.id">{{ variantLabel(variant) }} - {{ variant.price }}</hlm-select-item> }</hlm-select-content>
-              </div>
-               <div class="rounded-xl border border-slate-200 p-3 text-xs text-slate-500">
-                <p>Sucursal: {{ branchName(form.controls.branch_id.value || null) }}</p>
-                <p>Disponibilidad: {{ availabilityLabel(selectedVariant(product), form.controls.branch_id.value || null) }}</p>
-                <p>SKU: {{ selectedVariant(product)?.sku ?? 'Sin SKU' }}</p>
-               </div>
-               <a
-                 hlmBtn
-                 [routerLink]="['/app/cliente/products', product.id]"
-                 [queryParams]="{ from: 'reservations', branch_id: form.controls.branch_id.value || undefined }"
-                 variant="outline"
-                 class="w-full"
-                >
-                  Ver producto
-                </a>
-                <div class="grid grid-cols-[1fr_auto] gap-2"><input hlmInput type="number" min="1" [value]="draftQuantity(product)" (input)="setDraftQuantity(product, $any($event.target).value)" /><button hlmBtn type="button" (click)="addToDraft(product)">Agregar al borrador</button></div>
-            </div>
-          </article>
-        }
+<section class="mx-auto max-w-7xl space-y-6 pb-12 font-sans">
+  <!-- Cabecera Principal de Página -->
+  <header class="flex flex-col gap-4 border-b border-slate-200/80 pb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div class="space-y-1">
+      <div class="inline-flex items-center gap-2 rounded-full bg-peach-light border border-peach-border px-3 py-1 text-xs font-medium text-slate-800" style="background-color: var(--brand-peach-light); border-color: var(--brand-peach-border);">
+        <ng-icon name="lucideTicket" class="text-slate-800"></ng-icon>
+        <span>Experiencia Boutique Omnicanal</span>
       </div>
-
+      <h1 class="text-3xl font-bold tracking-tight text-slate-900 font-sans">Reserva de Prendas con Vencimiento</h1>
+      <p class="max-w-2xl text-sm text-slate-500">
+        Aparta tus prendas en la sucursal de tu elección con retención garantizada de inventario por 24 horas posteriores a tu visita programada.
+      </p>
     </div>
 
-    <aside class="xl:sticky xl:top-6 xl:self-start">
-      <section hlmCard class="bg-white shadow-sm py-4">
-        <div hlmCardContent class="space-y-4 px-4">
-          <div><h2 class="text-lg font-semibold">Crear reserva</h2><p class="text-sm text-slate-500">Completa la visita y revisa tu borrador.</p></div>
-          <div><label class="mb-1 block text-xs font-medium text-slate-600">Sucursal</label><div hlmSelect [value]="form.controls.branch_id.value" [itemToString]="branchSelectLabel" (valueChange)="form.controls.branch_id.setValue($event || ''); updateBranchAvailability()"><hlm-select-trigger><span hlmSelectValue placeholder="Sucursal"></span></hlm-select-trigger><hlm-select-content><hlm-select-item value="">Sucursal</hlm-select-item>@for (branch of branches(); track branch.id) { <hlm-select-item [value]="branch.id">{{ branch.name }} - {{ branch.city }}</hlm-select-item> }</hlm-select-content></div></div>
-          <div><label class="mb-1 block text-xs font-medium text-slate-600">Fecha y hora de visita</label><input hlmInput type="datetime-local" [formControl]="form.controls.visit_date" /></div>
-          <div class="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"><h3 class="font-semibold">Borrador</h3>@for (item of draftItems(); track item.variant_id) { <div class="flex items-start justify-between gap-3 border-b border-slate-200 pb-2 last:border-b-0 last:pb-0"><div><p class="font-medium">{{ item.product_name }}</p><p class="text-xs text-slate-500">{{ item.variant_label }} · {{ item.variant_sku }}</p><p class="text-xs text-slate-500">Cantidad: {{ item.quantity }}</p></div><button hlmBtn type="button" variant="ghost" (click)="removeDraftItem(item.variant_id)">Quitar</button></div> } @empty { <p class="text-slate-500">No hay items en el borrador.</p> }</div>
-          <div class="rounded-xl border border-slate-200 bg-white p-4 text-sm"><div class="flex justify-between"><span>Items</span><span class="font-medium">{{ draftCount() }}</span></div><div class="flex justify-between"><span>Total estimado</span><span class="font-medium">{{ draftTotal() | number:'1.2-2' }}</span></div></div>
-          <button hlmBtn class="w-full" type="button" (click)="submitReservation()" [disabled]="submitting() || !canSubmit()">{{ submitting() ? 'Guardando...' : 'Crear reserva' }}</button>
+    <div class="flex items-center gap-3">
+      @if (isOffline()) {
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+          <ng-icon name="lucideWifiOff" class="size-3.5"></ng-icon>
+          <span>Modo Contingencia Offline</span>
+        </span>
+      } @else {
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800">
+          <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Inventario en Línea</span>
+        </span>
+      }
+
+      <a
+        hlmBtn
+        variant="outline"
+        routerLink="/app/cliente/my-reservations"
+        class="flex items-center gap-2 rounded-xl border-slate-200 px-4 text-xs font-semibold hover:border-slate-300 hover:bg-slate-50 transition-colors"
+      >
+        <ng-icon name="lucideTicket" class="size-4 text-slate-700"></ng-icon>
+        <span>Mis Reservas</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Banner de Contingencia Offline cuando no hay red -->
+  @if (isOffline()) {
+    <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/50 p-4 text-amber-900 shadow-xs">
+      <div class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700">
+        <ng-icon name="lucideWifiOff" class="size-4"></ng-icon>
+      </div>
+      <div class="space-y-1 text-xs">
+        <p class="font-bold text-amber-950">Estás operando en Modo Desconectado (PWA)</p>
+        <p class="text-amber-800 leading-relaxed">
+          Puedes armar y registrar tu reserva normalmente. Se guardará de manera segura en el almacenamiento local de tu dispositivo (IndexedDB) con UUIDv4 idempotente y se sincronizará automáticamente con el servidor central al reanudarse tu conexión a internet.
+        </p>
+      </div>
+    </div>
+  }
+
+  <!-- Layout Principal de 2 Columnas: Catálogo (Izq) y Dossier de Reserva (Der) -->
+  <div class="grid gap-8 lg:grid-cols-12 items-start">
+    <!-- Columna Izquierda: Filtros y Catálogo de Prendas -->
+    <div class="space-y-6 lg:col-span-7 xl:col-span-8">
+      <!-- Tarjeta de Filtros y Búsqueda -->
+      <form
+        hlmCard
+        class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-shadow hover:shadow-md"
+        [formGroup]="form"
+        (ngSubmit)="search()"
+      >
+        <div class="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3">
+          <!-- Búsqueda por texto -->
+          <div hlmField class="sm:col-span-2 md:col-span-1">
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Buscar prenda</label>
+            <div class="relative">
+              <ng-icon name="lucideSearch" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400"></ng-icon>
+              <input
+                id="reservation-search"
+                hlmInput
+                placeholder="Nombre o descripción..."
+                formControlName="q"
+                class="pl-9 h-10 rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
+          <!-- Sucursal obligatoria para inventario -->
+          <div hlmField class="sm:col-span-2 md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-slate-700">
+              Sucursal física <span class="text-rose-500">* (Verifica stock local)</span>
+            </label>
+            <div
+              hlmSelect
+              formControlName="branch_id"
+              [itemToString]="branchSelectLabel"
+              (valueChange)="updateBranchAvailability()"
+              class="w-full"
+            >
+              <hlm-select-trigger class="h-10 rounded-xl text-xs">
+                <span hlmSelectValue placeholder="Seleccionar sucursal de retiro"></span>
+              </hlm-select-trigger>
+              <hlm-select-content class="rounded-xl border border-slate-200">
+                <hlm-select-item value="">Todas las sucursales</hlm-select-item>
+                @for (branch of branches(); track branch.id) {
+                  <hlm-select-item [value]="branch.id">
+                    {{ branch.name }} — {{ branch.city }} ({{ branch.address }})
+                  </hlm-select-item>
+                }
+              </hlm-select-content>
+            </div>
+          </div>
+
+          <!-- Filtro Categoría -->
+          <div hlmField>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Categoría</label>
+            <div hlmSelect formControlName="category_id" [itemToString]="categorySelectLabel" class="w-full">
+              <hlm-select-trigger class="h-10 rounded-xl text-xs">
+                <span hlmSelectValue placeholder="Todas las categorías"></span>
+              </hlm-select-trigger>
+              <hlm-select-content class="rounded-xl border border-slate-200">
+                <hlm-select-item value="">Todas las categorías</hlm-select-item>
+                @for (category of categories(); track category.id) {
+                  <hlm-select-item [value]="category.id">{{ category.name }}</hlm-select-item>
+                }
+              </hlm-select-content>
+            </div>
+          </div>
+
+          <!-- Filtro Talla -->
+          <div hlmField>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Talla</label>
+            <div hlmSelect formControlName="size_id" [itemToString]="sizeSelectLabel" class="w-full">
+              <hlm-select-trigger class="h-10 rounded-xl text-xs">
+                <span hlmSelectValue placeholder="Todas las tallas"></span>
+              </hlm-select-trigger>
+              <hlm-select-content class="rounded-xl border border-slate-200">
+                <hlm-select-item value="">Todas las tallas</hlm-select-item>
+                @for (size of sizes(); track size.id) {
+                  <hlm-select-item [value]="size.id">{{ size.name }}</hlm-select-item>
+                }
+              </hlm-select-content>
+            </div>
+          </div>
+
+          <!-- Filtro Color -->
+          <div hlmField>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Color</label>
+            <div hlmSelect formControlName="color_id" [itemToString]="colorSelectLabel" class="w-full">
+              <hlm-select-trigger class="h-10 rounded-xl text-xs">
+                <span hlmSelectValue placeholder="Todos los colores"></span>
+              </hlm-select-trigger>
+              <hlm-select-content class="rounded-xl border border-slate-200">
+                <hlm-select-item value="">Todos los colores</hlm-select-item>
+                @for (color of colors(); track color.id) {
+                  <hlm-select-item [value]="color.id">{{ color.name }}</hlm-select-item>
+                }
+              </hlm-select-content>
+            </div>
+          </div>
         </div>
-      </section>
+
+        <div class="mt-4 flex items-center justify-end gap-3 border-t border-slate-100 pt-3">
+          <button
+            type="submit"
+            class="btn-brand inline-flex h-9 items-center justify-center gap-2 rounded-xl px-5 text-xs font-bold"
+            [disabled]="loading()"
+          >
+            <ng-icon [name]="loading() ? 'lucideRefreshCw' : 'lucideSearch'" [class.animate-spin]="loading()" class="size-3.5"></ng-icon>
+            <span>{{ loading() ? 'Filtrando catálogo...' : 'Aplicar Filtros' }}</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Rejilla de Prendas Disponibles -->
+      <div class="grid gap-6 sm:grid-cols-2">
+        @for (product of products(); track product.id) {
+          <article
+            hlmCard
+            class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-0 shadow-xs transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300"
+          >
+            <!-- Carrusel de Imágenes del Producto -->
+            <div class="relative overflow-hidden bg-slate-100 aspect-[4/3] w-full">
+              @if (productImages(product).length > 0) {
+                <img
+                  [src]="currentProductImage(product)!"
+                  [alt]="product.name"
+                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-102"
+                  loading="lazy"
+                />
+                @if (productImages(product).length > 1) {
+                  <button
+                    type="button"
+                    class="absolute left-2.5 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur-xs transition hover:bg-slate-950"
+                    (click)="previousProductImage(product.id, productImages(product).length)"
+                    aria-label="Imagen anterior"
+                  >
+                    <ng-icon name="lucideChevronLeft" class="size-4"></ng-icon>
+                  </button>
+                  <button
+                    type="button"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur-xs transition hover:bg-slate-950"
+                    (click)="nextProductImage(product.id, productImages(product).length)"
+                    aria-label="Siguiente imagen"
+                  >
+                    <ng-icon name="lucideChevronRight" class="size-4"></ng-icon>
+                  </button>
+                  <div class="absolute bottom-2.5 right-2.5 rounded-full bg-slate-950/70 px-2.5 py-0.5 text-[10px] font-semibold text-white tracking-wider">
+                    {{ currentProductImageIndex(product) + 1 }} / {{ productImages(product).length }}
+                  </div>
+                }
+              } @else {
+                <div class="flex h-full w-full flex-col items-center justify-center gap-1.5 text-slate-400">
+                  <ng-icon name="lucideShoppingCart" class="size-8 stroke-1"></ng-icon>
+                  <span class="text-xs font-medium">Sin imagen disponible</span>
+                </div>
+              }
+
+              <!-- Badges Superpuestos -->
+              <div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
+                <span class="rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-800 shadow-xs backdrop-blur-xs">
+                  {{ categoryName(product.category_id) }}
+                </span>
+                @if (product.collection_id) {
+                  <span class="rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-medium text-white shadow-xs backdrop-blur-xs">
+                    {{ collectionName(product.collection_id) }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Contenido de la Prenda -->
+            <div class="flex flex-1 flex-col p-4.5 space-y-4">
+              <!-- Nombre y Precio -->
+              <div class="space-y-1">
+                <div class="flex items-start justify-between gap-2">
+                  <h3 class="font-bold text-base text-slate-900 line-clamp-1 group-hover:text-amber-900 transition-colors">
+                    {{ product.name }}
+                  </h3>
+                  <div class="text-right shrink-0">
+                    @if (selectedVariant(product); as variant) {
+                      <span class="text-base font-extrabold text-slate-900">Bs {{ variant.price }}</span>
+                    }
+                  </div>
+                </div>
+                <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                  {{ product.description || 'Prenda de alta costura confeccionada con materiales seleccionados.' }}
+                </p>
+              </div>
+
+              <!-- Selector de Variante (Talla / Color) -->
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-semibold text-slate-600">Talla y Color:</label>
+                <div
+                  hlmSelect
+                  class="w-full"
+                  [value]="selectedVariant(product)?.id"
+                  [itemToString]="variantSelectLabel(product)"
+                  (valueChange)="setSelectedVariant(product.id, $event)"
+                >
+                  <hlm-select-trigger size="sm" class="h-9 rounded-xl text-xs border-slate-200">
+                    <span hlmSelectValue placeholder="Seleccionar variante"></span>
+                  </hlm-select-trigger>
+                  <hlm-select-content class="rounded-xl border border-slate-200">
+                    @for (variant of productVariants(product); track variant.id) {
+                      <hlm-select-item [value]="variant.id">
+                        {{ variantLabel(variant) }} — Bs {{ variant.price }}
+                      </hlm-select-item>
+                    }
+                  </hlm-select-content>
+                </div>
+              </div>
+
+              <!-- Indicador de Disponibilidad en Sucursal -->
+              <div class="rounded-xl p-2.5 text-xs transition-colors"
+                [ngClass]="{
+                  'bg-emerald-50/80 border border-emerald-200 text-emerald-900': form.controls.branch_id.value && (selectedVariant(product)?.branch_quantity ?? 0) > 0,
+                  'bg-rose-50/80 border border-rose-200 text-rose-900': form.controls.branch_id.value && (selectedVariant(product)?.branch_quantity ?? 0) <= 0,
+                  'bg-slate-50 border border-slate-200 text-slate-600': !form.controls.branch_id.value
+                }"
+              >
+                <div class="flex items-center gap-1.5 font-medium">
+                  @if (form.controls.branch_id.value) {
+                    @if ((selectedVariant(product)?.branch_quantity ?? 0) > 0) {
+                      <ng-icon name="lucideCheckCircle2" class="size-4 text-emerald-600 shrink-0"></ng-icon>
+                      <span>{{ selectedVariant(product)?.branch_quantity }} disponibles en sucursal</span>
+                    } @else {
+                      <ng-icon name="lucideAlertCircle" class="size-4 text-rose-600 shrink-0"></ng-icon>
+                      <span>Sin existencias en esta sede</span>
+                    }
+                  } @else {
+                    <ng-icon name="lucideMapPin" class="size-4 text-slate-400 shrink-0"></ng-icon>
+                    <span>Selecciona sucursal para verificar stock</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Acciones: Cantidad y Agregar a Reserva -->
+              <div class="mt-auto pt-2 space-y-2 border-t border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-20 shrink-0">
+                    <input
+                      hlmInput
+                      type="number"
+                      min="1"
+                      [value]="draftQuantity(product)"
+                      (input)="setDraftQuantity(product, $any($event.target).value)"
+                      class="h-9 text-center text-xs rounded-xl"
+                      title="Cantidad a reservar"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-brand flex-1 inline-flex h-9 items-center justify-center gap-1.5 rounded-xl text-xs font-bold"
+                    (click)="addToDraft(product)"
+                  >
+                    <ng-icon name="lucidePlus" class="size-3.5"></ng-icon>
+                    <span>Agregar a Reserva</span>
+                  </button>
+                </div>
+
+                <a
+                  [routerLink]="['/app/cliente/products', product.id]"
+                  [queryParams]="{ from: 'reservations', branch_id: form.controls.branch_id.value || undefined }"
+                  class="flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors py-1"
+                >
+                  <span>Ver ficha y especificaciones</span>
+                  <ng-icon name="lucideExternalLink" class="size-3"></ng-icon>
+                </a>
+              </div>
+            </div>
+          </article>
+        } @empty {
+          <div class="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-12 text-center">
+            <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+              <ng-icon name="lucideSearch" class="size-6"></ng-icon>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">No encontramos prendas</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Prueba cambiando la sucursal seleccionada o ajustando los filtros de categoría y color.
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Sticky Dossier / Resumen de Reserva -->
+    <aside class="lg:col-span-5 xl:col-span-4 sticky top-6">
+      <div hlmCard class="rounded-2xl border border-slate-200/90 bg-white p-0 shadow-sm overflow-hidden">
+        <!-- Encabezado del Dossier -->
+        <div class="border-b border-peach-border bg-peach-light/60 p-4.5" style="background-color: var(--brand-peach-light); border-bottom-color: var(--brand-peach-border);">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="flex size-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
+                <ng-icon name="lucideTicket" class="size-4"></ng-icon>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">Dossier de Reserva</h2>
+                <p class="text-[11px] text-slate-500">Apartado presencial con retiro en tienda</p>
+              </div>
+            </div>
+            <span class="rounded-full bg-slate-900/10 px-2.5 py-0.5 text-xs font-bold text-slate-800">
+              {{ draftCount() }} {{ draftCount() === 1 ? 'prenda' : 'prendas' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-5">
+          <!-- Selección de Sucursal para la Reserva -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-slate-800">
+              Sucursal de Retiro <span class="text-rose-500">*</span>
+            </label>
+            <div
+              hlmSelect
+              [value]="form.controls.branch_id.value"
+              [itemToString]="branchSelectLabel"
+              (valueChange)="form.controls.branch_id.setValue($event || ''); updateBranchAvailability()"
+              class="w-full"
+            >
+              <hlm-select-trigger class="h-10 rounded-xl text-xs border-slate-200">
+                <span hlmSelectValue placeholder="Selecciona una sucursal"></span>
+              </hlm-select-trigger>
+              <hlm-select-content class="rounded-xl border border-slate-200">
+                <hlm-select-item value="">Selecciona una sucursal</hlm-select-item>
+                @for (branch of branches(); track branch.id) {
+                  <hlm-select-item [value]="branch.id">
+                    {{ branch.name }} — {{ branch.city }}
+                  </hlm-select-item>
+                }
+              </hlm-select-content>
+            </div>
+          </div>
+
+          <!-- Fecha de Visita Estimada (min: hoy, max: hoy+7 días) -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-800">
+                Fecha de Visita a Tienda <span class="text-rose-500">*</span>
+              </label>
+              <span class="text-[10px] text-slate-400">Máximo 7 días</span>
+            </div>
+            <div class="relative">
+              <input
+                hlmInput
+                type="date"
+                [min]="todayIso"
+                [max]="maxDateIso"
+                [formControl]="form.controls.visit_date"
+                class="h-10 rounded-xl text-xs font-medium"
+              />
+            </div>
+            <p class="text-[11px] text-slate-500">
+              Plazo de visita entre <strong class="text-slate-700">{{ todayIso }}</strong> y <strong class="text-slate-700">{{ maxDateIso }}</strong>.
+            </p>
+          </div>
+
+          <!-- Política de Vencimiento de 24 Horas -->
+          <div class="rounded-xl border border-slate-200/90 bg-slate-50/70 p-3 text-xs text-slate-600 space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-slate-800">
+              <ng-icon name="lucideClock" class="size-3.5 text-amber-600"></ng-icon>
+              <span>Vencimiento y Bloqueo de Stock:</span>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Las prendas se reservarán con bloqueo pesimista en base de datos hasta las <strong>23:59:59 del día siguiente</strong> a tu fecha de visita. Tras ese momento, se liberan automáticamente al catálogo.
+            </p>
+          </div>
+
+          <!-- Lista de Prendas en el Borrador -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span>Prendas en el borrador</span>
+              <span class="text-[11px] font-normal text-slate-500">{{ draftItems().length }} items</span>
+            </div>
+
+            <div class="max-h-60 overflow-y-auto space-y-2 pr-1">
+              @for (item of draftItems(); track item.variant_id) {
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white p-2.5 text-xs shadow-2xs">
+                  <div class="min-w-0 flex-1 space-y-0.5">
+                    <p class="font-bold text-slate-900 truncate">{{ item.product_name }}</p>
+                    <p class="text-[11px] text-slate-500">{{ item.variant_label }} · SKU: {{ item.variant_sku }}</p>
+                    <p class="text-[11px] font-semibold text-slate-700">
+                      {{ item.quantity }} x Bs {{ item.unit_price }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="flex size-7 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                    (click)="removeDraftItem(item.variant_id)"
+                    title="Quitar prenda"
+                  >
+                    <ng-icon name="lucideTrash2" class="size-3.5"></ng-icon>
+                  </button>
+                </div>
+              } @empty {
+                <div class="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                  No has agregado prendas a tu reserva.
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Resumen de Costos Estimados -->
+          <div class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 text-xs space-y-2">
+            <div class="flex justify-between text-slate-600">
+              <span>Total de prendas</span>
+              <span class="font-bold text-slate-900">{{ draftCount() }}</span>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>Costo por apartado</span>
+              <span class="font-semibold text-emerald-700">Gratis (Bs 0.00)</span>
+            </div>
+            <div class="border-t border-slate-200 pt-2 flex justify-between text-sm">
+              <span class="font-bold text-slate-900">Total estimado a pagar</span>
+              <span class="font-extrabold text-slate-900">Bs {{ draftTotal() | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+          <!-- Botón de Envío / Confirmación -->
+          <button
+            type="button"
+            class="btn-brand w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl text-xs font-bold shadow-sm"
+            [disabled]="submitting() || !canSubmit()"
+            (click)="submitReservation()"
+          >
+            @if (submitting()) {
+              <ng-icon name="lucideRefreshCw" class="size-4 animate-spin"></ng-icon>
+              <span>Bloqueando inventario y confirmando...</span>
+            } @else if (isOffline()) {
+              <ng-icon name="lucideWifiOff" class="size-4"></ng-icon>
+              <span>Guardar Reserva Offline</span>
+            } @else {
+              <ng-icon name="lucideTicket" class="size-4"></ng-icon>
+              <span>Confirmar Reserva de Prendas</span>
+            }
+          </button>
+        </div>
+      </div>
     </aside>
   </div>
+
+  <!-- Modal / Diálogo de Confirmación de Reserva con Código y QR -->
+  @if (lastCreatedReservation(); as res) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div class="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+        <!-- Cabecera del Voucher con Color de Marca -->
+        <div class="bg-peach-light border-b border-peach-border p-6 text-center" style="background-color: var(--brand-peach-light); border-bottom-color: var(--brand-peach-border);">
+          <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md">
+            <ng-icon name="lucideCheck" class="size-6 stroke-2"></ng-icon>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 font-sans">¡Reserva Confirmada!</h3>
+          <p class="text-xs text-slate-600 mt-1">
+            Tus prendas han sido apartadas y el inventario se encuentra retenido.
+          </p>
+        </div>
+
+        <!-- Cuerpo del Voucher -->
+        <div class="p-6 space-y-5 text-center">
+          <!-- Código de Reserva Destacado -->
+          <div class="space-y-1">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Código de Presentación</p>
+            <div class="inline-flex items-center gap-2 rounded-2xl bg-slate-100 border border-slate-200 px-4 py-2">
+              <span class="font-mono text-xl font-extrabold tracking-wide text-slate-900">{{ res.reservation_code }}</span>
+              <button
+                type="button"
+                class="flex size-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-900 transition-colors shadow-2xs"
+                (click)="copyCode(res.reservation_code)"
+                title="Copiar código"
+              >
+                <ng-icon name="lucideCopy" class="size-4"></ng-icon>
+              </button>
+            </div>
+          </div>
+
+          <!-- Código QR Generado (con soporte para QR Server o SVG fallback) -->
+          @if (res.qr_payload) {
+            <div class="mx-auto flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50/80 p-4 max-w-[200px]">
+              <img
+                [src]="'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + res.qr_payload"
+                [alt]="'QR de Reserva ' + res.reservation_code"
+                class="size-36 rounded-lg bg-white p-1 shadow-2xs"
+                loading="lazy"
+              />
+              <p class="mt-2 font-mono text-[10px] text-slate-500 truncate max-w-full">
+                {{ res.qr_payload }}
+              </p>
+            </div>
+          }
+
+          <!-- Detalles del Retiro -->
+          <div class="rounded-2xl border border-slate-100 bg-slate-50 p-3.5 text-left text-xs space-y-1.5 text-slate-600">
+            <div class="flex justify-between">
+              <span class="text-slate-500">Sucursal:</span>
+              <span class="font-bold text-slate-900 text-right">{{ res.branch_name }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Fecha de visita:</span>
+              <span class="font-bold text-slate-900">{{ res.visit_date }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Vencimiento:</span>
+              <span class="font-bold text-rose-700">{{ res.expires_at }} (23:59:59)</span>
+            </div>
+            <div class="flex justify-between border-t border-slate-200/60 pt-1.5">
+              <span class="text-slate-500">Prendas / Total:</span>
+              <span class="font-extrabold text-slate-900">{{ res.item_count }} prendas (Bs {{ res.total_amount }})</span>
+            </div>
+          </div>
+
+          <!-- Botones de Acción del Modal -->
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              (click)="closeSuccessModal()"
+            >
+              Cerrar
+            </button>
+            <a
+              hlmBtn
+              routerLink="/app/cliente/my-reservations"
+              class="btn-brand inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-xs font-bold"
+              (click)="closeSuccessModal()"
+            >
+              <ng-icon name="lucideTicket" class="size-4"></ng-icon>
+              <span>Ver Mis Reservas</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 </section>
