@@ -1,13 +1,26 @@
 # HANDOFF LATEST — FASHIONSTORE SAAS MULTITENANT
 
-## Estado de Relevo Operativo al 28/10/2026 (Consolidación Definitiva de Base de Datos)
+## Estado de Relevo Operativo al 29/10/2026 (Backend CU13 Completado)
 
 ### 1. Avances Consolidados en esta Sesión
 
-1. **CU12 – Comprar Prendas con Stripe y Despacho Condicionado (100% CERRADO FULLSTACK):**
-   - **Backend:** Migración `0043` (`delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at`). Política 3 inviolable (despacho condicionado a `payment_status = 'paid'`). Suite de pruebas `test_cu12_stripe_conditioned_dispatch.py` (5/5 PASSED).
-   - **Frontend Web:** Modal interactivo de checkout en `/app/cart`, historial en `/app/orders` con buscador por guía y stepper ICONIX de 5 etapas; panel de almacén en `/app/admin/orders` con bloqueo reactivo de despacho.
-   - **Mobile Flutter:** Modelos, API, controlador, `checkout_page.dart` con toggle domicilio/retiro, `StripePaymentSheet`, diálogo con guía y `orders_page.dart` con Bottom Sheet de stepper animado. Suite Flutter (10/10 PASSED).
+1. **CU13 – Crear Reserva de Prendas con Vencimiento (BACKEND 100% CERRADO Y PROBADO):**
+   - **Esquemas Pydantic v2 ([`reservation_schema.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/schemas/reservation_schema.py)):**
+     - Añadido soporte para contingencia offline e idempotencia: `client_reservation_id: UUID | None`.
+     - Validador estricto `@field_validator("visit_date")` garantizando que la fecha de visita esté entre hoy y un horizonte máximo de 7 días hacia el futuro.
+     - Serialización enriquecida en `ReservationRead` con `tenant_id`, `reservation_code` (`RES-XXXXXXXX`), `qr_payload` (`FS-RES:UUID`), `resolved_at`, `resolved_by`, `resolution_note`.
+   - **Servicio Transaccional ([`reservation_service.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/services/reservation_service.py)):**
+     - Inyección obligatoria y validación estricta de `tenant_id` en creación, listado, obtención y cancelación.
+     - Bloqueo pesimista con `_get_inventory_for_update()` impidiendo carreras críticas (*race conditions*) sobre el stock de prendas.
+     - Cálculo automático de expiración: `expires_at = visit_date + timedelta(days=1)`.
+     - Decremento e incremento atómico de `reserved_quantity` al reservar y al cancelar.
+     - Verificación de la **Política de Negocio 6**: rutina `expire_due_reservations()` que transiciona automáticamente las reservas vencidas a `expired` y restituye el stock a disponible.
+   - **Rutas REST ([`reservation_routes.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/routes/reservation_routes.py)):**
+     - Integración de `get_tenant_id_from_header` en `POST /reservations`, `GET /reservations/me`, `GET /reservations/branch`, `GET /reservations/{id}` y `PATCH /reservations/{id}/cancel`.
+     - Soporte para endpoints con y sin trailing slash (`/reservations` y `/reservations/`).
+   - **Suite de Pruebas Automatizadas ([`test_cu13_reservations_with_expiration.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu13_reservations_with_expiration.py)):**
+     - 7/7 pruebas PASSED (100%): Happy path, rechazo por stock insuficiente, rechazo de fechas pasadas o lejanas, cancelación con restitución de inventario, expiración automática con liberación de stock, aislamiento SaaS inter-tenant e idempotencia por `client_reservation_id`.
+   - **Regresión:** Suite CU12 (`test_cu12_stripe_conditioned_dispatch.py`) 5/5 PASSED (100%).
 
 2. **Consolidación Definitiva de Base de Datos para Todos los Casos de Uso (CU13 a CU28):**
    - **Migración Maestra 0044 (`0044_complete_database_schema_all_use_cases.py`):**

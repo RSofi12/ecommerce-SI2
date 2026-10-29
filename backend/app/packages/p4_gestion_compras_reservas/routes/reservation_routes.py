@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_branch_id, require_roles
 from app.core.database import get_db
+from app.core.tenant_context import get_tenant_id_from_header
 from app.schemas.enums import RolEnum
 from app.packages.p4_gestion_compras_reservas.schemas.reservation_schema import (
     ReservationCreate,
@@ -31,15 +32,17 @@ router = APIRouter(prefix="/reservations", tags=["Reservations"])
 @router.get("/me")
 async def list_my_reservations_route(
     db: Session = Depends(get_db),
+    tenant_id: UUID | None = Depends(get_tenant_id_from_header),
     current_user: dict = Depends(require_roles(RolEnum.cliente)),
 ):
-    reservations = list_reservations(db, UUID(current_user["sub"]))
+    reservations = list_reservations(db, UUID(current_user["sub"]), tenant_id=tenant_id)
     return response(status_code=200, message="Reservas obtenidas exitosamente", data=reservations)
 
 
 @router.get("/branch")
 async def list_branch_reservations_route(
     db: Session = Depends(get_db),
+    tenant_id: UUID | None = Depends(get_tenant_id_from_header),
     branch_id: UUID | None = Query(default=None),
     current_branch_id: UUID | None = Depends(get_current_branch_id),
     current_user: dict = Depends(require_roles(RolEnum.administrador, RolEnum.encargado, RolEnum.cajero)),
@@ -51,7 +54,7 @@ async def list_branch_reservations_route(
     if current_user.get("rol") != RolEnum.administrador.value and current_branch_id and resolved_branch_id != current_branch_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para esta sucursal")
 
-    reservations = list_reservations_by_branch(db, resolved_branch_id)
+    reservations = list_reservations_by_branch(db, resolved_branch_id, tenant_id=tenant_id)
     return response(status_code=200, message="Reservas de sucursal obtenidas exitosamente", data=reservations)
 
 
@@ -59,6 +62,7 @@ async def list_branch_reservations_route(
 async def get_branch_reservation_route(
     reservation_id: UUID,
     db: Session = Depends(get_db),
+    tenant_id: UUID | None = Depends(get_tenant_id_from_header),
     branch_id: UUID | None = Query(default=None),
     current_branch_id: UUID | None = Depends(get_current_branch_id),
     current_user: dict = Depends(require_roles(RolEnum.administrador, RolEnum.encargado, RolEnum.cajero)),
@@ -70,8 +74,8 @@ async def get_branch_reservation_route(
     if current_user.get("rol") != RolEnum.administrador.value and current_branch_id and resolved_branch_id != current_branch_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para esta sucursal")
 
-    reservation = list_reservations_by_branch(db, resolved_branch_id)
-    match = next((item for item in reservation if str(item["id"]) == str(reservation_id)), None)
+    reservations = list_reservations_by_branch(db, resolved_branch_id, tenant_id=tenant_id)
+    match = next((item for item in reservations if str(item["id"]) == str(reservation_id)), None)
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Reserva con id {reservation_id} no encontrada")
     return response(status_code=200, message="Reserva obtenida exitosamente", data=match)
@@ -81,22 +85,25 @@ async def get_branch_reservation_route(
 async def get_reservation_route(
     reservation_id: UUID,
     db: Session = Depends(get_db),
+    tenant_id: UUID | None = Depends(get_tenant_id_from_header),
     current_user: dict = Depends(require_roles(RolEnum.cliente)),
 ):
-    reservation = get_reservation(db, UUID(current_user["sub"]), reservation_id)
+    reservation = get_reservation(db, UUID(current_user["sub"]), reservation_id, tenant_id=tenant_id)
     if not reservation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Reserva con id {reservation_id} no encontrada")
     return response(status_code=200, message="Reserva obtenida exitosamente", data=reservation)
 
 
+@router.post("", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_reservation_route(
     payload: ReservationCreate,
     db: Session = Depends(get_db),
+    tenant_id: UUID | None = Depends(get_tenant_id_from_header),
     current_user: dict = Depends(require_roles(RolEnum.cliente)),
 ):
     try:
-        reservation = create_reservation(db, UUID(current_user["sub"]), payload)
+        reservation = create_reservation(db, UUID(current_user["sub"]), payload, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return response(status_code=status.HTTP_201_CREATED, message="Reserva creada exitosamente", data=reservation)
@@ -106,10 +113,11 @@ async def create_reservation_route(
 async def cancel_reservation_route(
     reservation_id: UUID,
     db: Session = Depends(get_db),
+    tenant_id: UUID | None = Depends(get_tenant_id_from_header),
     current_user: dict = Depends(require_roles(RolEnum.cliente)),
 ):
     try:
-        reservation = cancel_reservation(db, UUID(current_user["sub"]), reservation_id)
+        reservation = cancel_reservation(db, UUID(current_user["sub"]), reservation_id, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     if not reservation:

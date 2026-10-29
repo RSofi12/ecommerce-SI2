@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 import logging
 from uuid import UUID
+import uuid
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -78,6 +79,7 @@ def _reservation_items_query(db: Session, reservation_id: UUID):
     return (
         db.query(
             ReservationItem.id.label("id"),
+            ReservationItem.tenant_id.label("tenant_id"),
             ReservationItem.reservation_id.label("reservation_id"),
             ReservationItem.variant_id.label("variant_id"),
             ReservationItem.quantity.label("quantity"),
@@ -117,6 +119,7 @@ def _serialize_reservation(db: Session, reservation: Reservation) -> Reservation
             ReservationItemRead.model_validate(
                 {
                     **data,
+                    "tenant_id": data.get("tenant_id") or reservation.tenant_id,
                     "line_total": line_total,
                 }
             ).model_dump()
@@ -128,6 +131,7 @@ def _serialize_reservation(db: Session, reservation: Reservation) -> Reservation
     return ReservationRead.model_validate(
         {
             "id": reservation.id,
+            "tenant_id": reservation.tenant_id,
             "branch_id": reservation.branch_id,
             "branch_name": branch_name,
             "user_id": reservation.user_id,
@@ -138,6 +142,11 @@ def _serialize_reservation(db: Session, reservation: Reservation) -> Reservation
             "status": reservation.status,
             "total_amount": total_amount,
             "item_count": item_count,
+            "reservation_code": f"RES-{str(reservation.id)[:8].upper()}",
+            "qr_payload": f"FS-RES:{reservation.id}",
+            "resolved_at": reservation.resolved_at,
+            "resolved_by": reservation.resolved_by,
+            "resolution_note": reservation.resolution_note,
             "created_at": reservation.created_at,
             "updated_at": reservation.updated_at,
             "items": items,
@@ -226,51 +235,85 @@ def expire_transferred_reservations(db: Session):
     return expired
 
 
-def list_reservations(db: Session, user_id: UUID):
+def list_reservations(db: Session, user_id: UUID, tenant_id: UUID | None = None):
     expire_due_reservations(db)
-    reservations = (
-        db.query(Reservation)
-        .filter(Reservation.user_id == user_id)
-        .order_by(Reservation.created_at.desc())
-        .all()
-    )
+    query = db.query(Reservation).filter(Reservation.user_id == user_id)
+    if tenant_id:
+        query = query.filter(Reservation.tenant_id == tenant_id)
+    reservations = query.order_by(Reservation.created_at.desc()).all()
     return [_serialize_reservation(db, reservation).model_dump() for reservation in reservations]
 
 
-def list_reservations_by_branch(db: Session, branch_id: UUID):
+def list_reservations_by_branch(db: Session, branch_id: UUID, tenant_id: UUID | None = None):
     expire_due_reservations(db)
-    reservations = (
-        db.query(Reservation)
-        .filter(Reservation.branch_id == branch_id)
-        .order_by(Reservation.created_at.desc())
-        .all()
-    )
+    query = db.query(Reservation).filter(Reservation.branch_id == branch_id)
+    if tenant_id:
+        query = query.filter(Reservation.tenant_id == tenant_id)
+    reservations = query.order_by(Reservation.created_at.desc()).all()
     return [_serialize_reservation(db, reservation).model_dump() for reservation in reservations]
 
 
-def get_reservation(db: Session, user_id: UUID, reservation_id: UUID):
+def get_reservation(db: Session, user_id: UUID, reservation_id: UUID, tenant_id: UUID | None = None):
     expire_due_reservations(db)
     reservation = _get_reservation_for_user(db, reservation_id, user_id)
     if not reservation:
         return None
+    if tenant_id and reservation.tenant_id and reservation.tenant_id != tenant_id:
+        return None
     return _serialize_reservation(db, reservation).model_dump()
 
 
-def create_reservation(db: Session, user_id: UUID, payload: ReservationCreate):
+def create_reservation(db: Session, user_id: UUID, payload: ReservationCreate, tenant_id: UUID | None = None):
     expire_due_reservations(db)
 
+    # 1. Validar fechas de visita (rango de hoy hasta 7 días posteriores)
+    today = date.today()
+    if payload.visit_date < today:
+        raise ValueError("La fecha de visita no puede ser anterior a la fecha actual.")
+    if payload.visit_date > today + timedelta(days=7):
+        raise ValueError("La fecha de reserva no puede exceder los 7 días de anticipación.")
+
+    # 2. Validar cantidades de ítems
     normalized_items: dict[UUID, int] = defaultdict(int)
     for item in payload.items:
+        if item.quantity <= 0:
+            raise ValueError("La cantidad a reservar debe ser mayor a cero.")
         normalized_items[item.variant_id] += item.quantity
 
+    # 3. Validar sucursal existente y activa
     branch = db.query(Branch).filter(Branch.id == payload.branch_id).first()
     if not branch:
         raise ValueError("Sucursal no encontrada")
     if hasattr(branch, "is_active") and not branch.is_active:
         raise ValueError("Sucursal inactiva")
 
+    # 4. Resolver y validar aislamiento multitenant
+    branch_tenant_id = getattr(branch, "tenant_id", None)
+    resolved_tenant_id = tenant_id or branch_tenant_id
+
+    if tenant_id and branch_tenant_id and branch_tenant_id != tenant_id:
+        raise ValueError("La sucursal seleccionada no pertenece a la empresa actual.")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise ValueError("Usuario cliente no encontrado")
+    if tenant_id and getattr(user, "tenant_id", None) and user.tenant_id != tenant_id:
+        raise ValueError("El usuario no pertenece a la empresa actual.")
+    if not resolved_tenant_id and getattr(user, "tenant_id", None):
+        resolved_tenant_id = user.tenant_id
+
+    # 5. Idempotencia y contingencia offline
+    client_res_id = getattr(payload, "client_reservation_id", None)
+    if client_res_id:
+        existing = db.query(Reservation).filter(Reservation.id == client_res_id).first()
+        if existing:
+            return _serialize_reservation(db, existing).model_dump()
+
+    reservation_id = client_res_id or uuid.uuid4()
     with db.begin_nested():
         reservation = Reservation(
+            id=reservation_id,
+            tenant_id=resolved_tenant_id,
             branch_id=payload.branch_id,
             user_id=user_id,
             visit_date=payload.visit_date,
@@ -302,6 +345,7 @@ def create_reservation(db: Session, user_id: UUID, payload: ReservationCreate):
             inventory.reserved_quantity = (inventory.reserved_quantity or 0) + quantity
             db.add(
                 ReservationItem(
+                    tenant_id=resolved_tenant_id,
                     reservation_id=reservation.id,
                     variant_id=variant_id,
                     quantity=quantity,
@@ -319,11 +363,15 @@ def create_reservation(db: Session, user_id: UUID, payload: ReservationCreate):
     return _serialize_reservation(db, reservation).model_dump()
 
 
-def cancel_reservation(db: Session, user_id: UUID, reservation_id: UUID):
+def cancel_reservation(db: Session, user_id: UUID, reservation_id: UUID, tenant_id: UUID | None = None):
     expire_due_reservations(db)
     reservation = _get_reservation_for_user(db, reservation_id, user_id)
     if not reservation:
         return None
+    if tenant_id and reservation.tenant_id and reservation.tenant_id != tenant_id:
+        raise ValueError("No tienes permisos para cancelar reservas de otra empresa.")
+    if reservation.status not in {ReservationStatusEnum.pending, ReservationStatusEnum.confirmed}:
+        raise ValueError(f"No se puede cancelar una reserva en estado '{reservation.status.value}'.")
     with db.begin_nested():
         for item in reservation.items:
             inventory = _get_inventory_for_update(db, item.variant_id, reservation.branch_id)

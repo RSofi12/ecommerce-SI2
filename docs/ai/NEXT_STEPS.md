@@ -41,9 +41,9 @@
 
 #### Prioridad Inmediata A: Reservas de Prendas en Tienda Física (CU13 y CU14)
 1. **CU13: Crear Reserva de Prendas con Vencimiento:**
-   - [ ] Backend: Lógica en `reservation_service.py` (`POST /api/reservations`), incremento de `reserved_quantity` en `inventory` y temporizador de expiración (24-48h).
-   - [ ] Frontend Web: Vista de confirmación de reserva y selección de sucursal de visita.
-   - [ ] Mobile Flutter: Pantalla de reserva de prendas y recordatorio de retiro.
+   - [x] Backend: Lógica en `reservation_service.py` (`POST /api/reservations`), incremento de `reserved_quantity` en `inventory`, validación de fechas (hoy a 7 días), temporizador de expiración (`expires_at = visit_date + 24h`), aislamiento `tenant_id`, códigos QR/amigables y suite de tests (7/7 PASSED).
+   - [ ] Frontend Web: Vista de confirmación de reserva y selección de sucursal de visita con temporizador/countdown e IndexedDB offline.
+   - [ ] Mobile Flutter: Pantalla de reserva de prendas con selector de sucursal, ticket digital con código QR y persistencia SQLite offline.
 2. **CU14: Atender y Resolver Conflictos de Reservas:**
    - [ ] Backend: Tarea periódica de expiración (`expire_daily.py`), endpoints de resolución `/api/reservations/{id}/resolve`.
    - [ ] Frontend Web: Panel de encargado de sucursal para liberar prendas no retiradas a stock general.
