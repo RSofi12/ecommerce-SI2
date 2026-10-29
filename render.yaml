@@ -1,11 +1,13 @@
 services:
   - type: web
     name: fashionstore-backend
-    env: python
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
-    dockerfilePath: ./backend/Dockerfile
+    runtime: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "alembic upgrade head && python -m seed && uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.9"
       - key: DATABASE_URL
         value: "postgresql+psycopg2://neondb_owner:npg_4NnHEasV9QzO@ep-little-base-b5ckb41q-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
       - key: SECRET_KEY
@@ -42,9 +44,6 @@ services:
     healthCheckPath: /health
     plan: free
     region: oregon
-    postDeployCommand: |
-      alembic upgrade head
-      python -m seed
 
   - type: web
     name: fashionstore-frontend
