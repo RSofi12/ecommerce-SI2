@@ -38,7 +38,7 @@ Documento oficial de control de avance de los **28 Casos de Uso** organizados po
 - [x] **CU11 – Registrar Movimiento de Inventario y Traspasos** [1er Parcial - MODIFICADO - 100% Implementado (Backend y Frontend Web)]
 - [x] **CU12 – Gestionar Carrito y Compra Digital con Pasarela Stripe y Despacho Condicionado** [1er Parcial - MODIFICADO - 100% Implementado (Backend, BD, Frontend Web y Mobile Flutter)]
   - *Regla de negocio:* El envío/entrega solo se autoriza con pago confirmado en Stripe (Política 3).
-- [ ] **CU13 – Registrar Reserva de Prendas (Online y Offline)** [2do Parcial - NUEVO]
+- [/] **CU13 – Registrar Reserva de Prendas (Online y Offline)** [2do Parcial - NUEVO - Backend y Frontend Web 100% Implementados; Mobile Pendiente]
 - [ ] **CU14 – Atender Reserva y Resolver Conflictos de Stock** [1er Parcial - MODIFICADO]
 - [ ] **CU15 – Registrar Venta Presencial en Caja POS (Online)** [1er Parcial - MODIFICADO]
 - [ ] **CU16 – Registrar Venta de Contado en Modo Offline** [2do Parcial - NUEVO]

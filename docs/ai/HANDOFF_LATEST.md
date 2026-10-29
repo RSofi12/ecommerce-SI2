@@ -1,26 +1,31 @@
 # HANDOFF LATEST — FASHIONSTORE SAAS MULTITENANT
 
-## Estado de Relevo Operativo al 29/10/2026 (Backend CU13 Completado)
+## Estado de Relevo Operativo al 29/10/2026 (CU13 Backend + Frontend Redesign Completados)
 
 ### 1. Avances Consolidados en esta Sesión
 
-1. **CU13 – Crear Reserva de Prendas con Vencimiento (BACKEND 100% CERRADO Y PROBADO):**
-   - **Esquemas Pydantic v2 ([`reservation_schema.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/schemas/reservation_schema.py)):**
-     - Añadido soporte para contingencia offline e idempotencia: `client_reservation_id: UUID | None`.
-     - Validador estricto `@field_validator("visit_date")` garantizando que la fecha de visita esté entre hoy y un horizonte máximo de 7 días hacia el futuro.
-     - Serialización enriquecida en `ReservationRead` con `tenant_id`, `reservation_code` (`RES-XXXXXXXX`), `qr_payload` (`FS-RES:UUID`), `resolved_at`, `resolved_by`, `resolution_note`.
-   - **Servicio Transaccional ([`reservation_service.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/services/reservation_service.py)):**
-     - Inyección obligatoria y validación estricta de `tenant_id` en creación, listado, obtención y cancelación.
-     - Bloqueo pesimista con `_get_inventory_for_update()` impidiendo carreras críticas (*race conditions*) sobre el stock de prendas.
-     - Cálculo automático de expiración: `expires_at = visit_date + timedelta(days=1)`.
-     - Decremento e incremento atómico de `reserved_quantity` al reservar y al cancelar.
-     - Verificación de la **Política de Negocio 6**: rutina `expire_due_reservations()` que transiciona automáticamente las reservas vencidas a `expired` y restituye el stock a disponible.
-   - **Rutas REST ([`reservation_routes.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/routes/reservation_routes.py)):**
-     - Integración de `get_tenant_id_from_header` en `POST /reservations`, `GET /reservations/me`, `GET /reservations/branch`, `GET /reservations/{id}` y `PATCH /reservations/{id}/cancel`.
-     - Soporte para endpoints con y sin trailing slash (`/reservations` y `/reservations/`).
-   - **Suite de Pruebas Automatizadas ([`test_cu13_reservations_with_expiration.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu13_reservations_with_expiration.py)):**
-     - 7/7 pruebas PASSED (100%): Happy path, rechazo por stock insuficiente, rechazo de fechas pasadas o lejanas, cancelación con restitución de inventario, expiración automática con liberación de stock, aislamiento SaaS inter-tenant e idempotencia por `client_reservation_id`.
-   - **Regresión:** Suite CU12 (`test_cu12_stripe_conditioned_dispatch.py`) 5/5 PASSED (100%).
+1. **CU13 – Crear Reserva de Prendas con Vencimiento (BACKEND Y FRONTEND WEB 100% COMPLETADOS):**
+   - **Frontend Web & Rediseño Estético (/frontend-design & /design-taste-frontend):**
+     - **Identidad de Marca en Sidebar:** Reemplazado texto "ACID Web" por el imagotipo oficial del carrito de compras FashionStore y subtítulo "FashionStore — Plataforma SaaS" ([`app-shell.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/layouts/app-shell.component.html)).
+     - **Tipografía Montserrat Regular (400):** Blindada mediante selectores directos en [`styles.css`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/styles.css) sobre los botones y enlaces del sidebar Spartan UI (`font-weight: 400 !important` regular, `600 !important` activo).
+     - **Favicon de Pestaña y Título:** Reemplazado el escudo predeterminado de Angular por el favicon vectorial en SVG de FashionStore ([`favicon.svg`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/public/favicon.svg)) y título configurado a `FashionStore — SaaS Multitenant` en [`index.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/index.html).
+     - **Página de Reservas ([`reservations-page.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/reservations-page.component.html) y [`.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/reservations-page.component.ts)):**
+       - Paleta de marca integrada: `#f8baa3` (brand peach), `#E07A5F` (terracotta primary), `#191c21` (brand dark obsidian).
+       - Banner de contingencia offline automático si no hay conexión a internet (`NetworkStatusService`).
+       - Formulario de filtros responsivo (búsqueda, sucursal obligatoria para stock, categoría, talla, color, colección).
+       - Cards de prendas con carrusel de imágenes, tags flotantes y **pills dinámicas de disponibilidad por sucursal**: Emerald ("N disponibles en sucursal") si stock > 0, Rose ("Sin existencias en esta sede") si stock es 0, Slate si no hay sucursal elegida.
+       - **Dossier de Reserva Flotante (Sticky Sidebar):** Selector de fecha con validación estricta de 7 días (`[min]="todayIso"` y `[max]="maxDateIso"`), recordatorio de vencimiento a las 24 horas posteriores a la visita (Política 6), desglose de prendas, conteo y total en Bs.
+       - Botón principal de apartado (`.btn-brand` con micro-interacción) que invoca la API o guarda en contingencia offline.
+       - **Modal Voucher con QR y Código:** Generación visual del código de reserva (`RES-XXXXXXXX` u `OFFLINE-XXXXXX`) con botón de copiado rápido y renderizado de código QR escaneable (`FS-RES:UUID`).
+     - **Servicio de Almacenamiento Local Offline ([`idb-reservations.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/idb-reservations.service.ts)):**
+       - Persistencia local de reservas creadas offline con `client_reservation_id` (UUIDv4) para su posterior sincronización con idempotencia en el servidor.
+     - **Página "Mis Reservas" ([`my-reservations-page.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/my-reservations-page.component.html) y [`.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/my-reservations-page.component.ts)):**
+       - Sección destacada de reservas offline con botón de sincronización masiva con un clic.
+       - Tarjetas estilo ticket boutique para reservas activas e históricas con badges de estado, fecha de expiración, desglose de prendas e inspección de tarjeta QR en modal interactivo.
+       - Ciclo de vida completo: cancelar reserva (restitución inmediata de stock), decidir compra tras atención en tienda y transferir al carrito de compras.
+     - **Verificación TypeScript:** `tsc --noEmit` completado con 0 errores.
+   - **Backend Transaccional ([`p4_gestion_compras_reservas`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/app/packages/p4_gestion_compras_reservas/)):**
+     - Inyección multitenant, bloqueo pesimista `with_for_update()`, validación 7 días, cálculo automático de `expires_at`, código de reserva, código QR y liberación automática de vencidas. 7/7 tests unitarios PASSED.
 
 2. **Consolidación Definitiva de Base de Datos para Todos los Casos de Uso (CU13 a CU28):**
    - **Migración Maestra 0044 (`0044_complete_database_schema_all_use_cases.py`):**

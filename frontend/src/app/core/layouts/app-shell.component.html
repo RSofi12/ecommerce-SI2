@@ -1,10 +1,18 @@
-<div hlmSidebarWrapper class="text-slate-900">
+<div hlmSidebarWrapper class="text-slate-900 font-sans">
   <hlm-sidebar collapsible="icon" variant="inset" side="left">
-    <header hlmSidebarHeader class="flex h-16 items-start justify-center border-b border-slate-200 px-4">
+    <header hlmSidebarHeader class="flex h-16 items-center justify-between border-b border-slate-200 px-4">
       <div class="flex items-center gap-3 text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
         <button hlmSidebarTrigger type="button" aria-label="Abrir o cerrar navegación"></button>
-        <div class="min-w-0 group-data-[collapsible=icon]:hidden">
-          <p class="truncate text-lg font-semibold">ACI Web</p>
+        <div class="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
+          <img
+            src="/assets/logo-fashionstore.png"
+            alt="FashionStore Logo"
+            class="size-8 shrink-0 object-contain rounded-lg shadow-2xs"
+          />
+          <div class="min-w-0">
+            <p class="truncate text-base font-bold tracking-tight text-slate-900 font-sans">FashionStore</p>
+            <p class="truncate text-[10px] uppercase font-semibold tracking-wider text-slate-400 font-sans">Plataforma SaaS</p>
+          </div>
         </div>
       </div>
     </header>
@@ -22,9 +30,10 @@
                 #active="routerLinkActive"
                 [isActive]="active.isActive"
                 [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+                class="font-normal font-sans text-slate-700 hover:text-slate-900"
               >
                 <ng-icon [name]="item.icon"></ng-icon>
-                <span>{{ item.label }}</span>
+                <span class="font-normal font-sans text-sm">{{ item.label }}</span>
               </a>
             </li>
           }
@@ -42,15 +51,16 @@
             #profileActive="routerLinkActive"
             [isActive]="profileActive.isActive"
             [routerLinkActiveOptions]="{ exact: profileItem.exact }"
+            class="font-normal font-sans text-slate-700 hover:text-slate-900"
           >
             <ng-icon [name]="profileItem.icon"></ng-icon>
-            <span>{{ profileItem.label }}</span>
+            <span class="font-normal font-sans text-sm">{{ profileItem.label }}</span>
           </a>
         </li>
         <li hlmSidebarMenuItem>
-          <button hlmSidebarMenuButton type="button" (click)="logout()">
+          <button hlmSidebarMenuButton type="button" (click)="logout()" class="font-normal font-sans text-slate-700 hover:text-rose-600">
             <ng-icon name="lucideLogOut"></ng-icon>
-            <span>Cerrar sesión</span>
+            <span class="font-normal font-sans text-sm">Cerrar sesión</span>
           </button>
         </li>
       </ul>
@@ -71,7 +81,7 @@
         >
           <ng-icon name="lucideBell" style="--ng-icon__size: 20px;"></ng-icon>
           @if (notifications.unreadCount() > 0) {
-            <span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-primary px-1 text-center text-xs text-primary-foreground">
+            <span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-primary px-1 text-center text-xs text-primary-foreground font-bold">
               {{ notifications.unreadCount() > 99 ? '99+' : notifications.unreadCount() }}
             </span>
           }
@@ -80,8 +90,8 @@
           <ng-icon name="lucideUserRound" style="--ng-icon__size: 24px;"></ng-icon>
         </div>
         <div class="leading-tight text-left">
-          <p class="font-medium">{{ fullName() }}</p>
-          <p class="text-xs uppercase tracking-wide text-slate-500">{{ userRoleLabel() }}</p>
+          <p class="font-medium text-slate-800">{{ fullName() }}</p>
+          <p class="text-xs uppercase tracking-wide text-slate-500 font-sans">{{ userRoleLabel() }}</p>
           <p class="text-xs text-slate-400">{{ userBranchLabel() }}</p>
         </div>
       </div>
