@@ -1,66 +1,57 @@
 # NEXT STEPS — FASHIONSTORE SAAS MULTITENANT
 
-## Tareas Inmediatas de Implementación (Presentación 1: 25/10/2026)
+## Tareas de Implementación (Presentación 2)
 
 ### Hito 1: Núcleo SaaS Multitenant, Planes y Catálogo (CU01 a CU07 COMPLETADOS)
-1. **CU01, CU02, CU03, CU04 & CU05 (Plataforma y Acceso):**
-   - [x] Portal Superadmin con alta de empresas y Downgrade Guard en planes.
-   - [x] Autenticación JWT con inyección obligatoria de `tenant_id`, `rol`, `branch_id`.
-   - [x] Gestión de sucursales bloqueando el límite del plan (2 vs 10) con widget reactivo en Angular 21.
-   - [x] Endpoints `/api/users/me` para consulta y edición de perfil.
-2. **CU06 & CU07: Catálogo de Prendas y Variantes Multitenant (COMPLETADOS):**
-   - [x] Migración `0041` aplicada en PostgreSQL con `tenant_id` en `products`, `product_variants` e `inventory`.
-   - [x] Backend `p2_gestion_productos_catalogo`: inyección estricta de `tenant_id` desde JWT en `create_product()`, `update_product()`, `delete_product()` y `list_admin_products()`.
-   - [x] Precios diferenciados por talla en variantes (fundamento para cambios de prenda con diferencia en CU19).
-   - [x] Consolidación transaccional con `db.commit()` en `catalog_service.py`.
-   - [x] Filtro facetado por `tenant_id` en catálogo público (`/api/catalog/products?tenant_id=...`).
-   - [x] Suite de pruebas `test_cu06_cu07_multitenant_catalog.py` (4/4 PASSED).
+- [x] Portal Superadmin con alta de empresas y Downgrade Guard en planes.
+- [x] Autenticación JWT con inyección obligatoria de `tenant_id`, `rol`, `branch_id`.
+- [x] Gestión de sucursales bloqueando el límite del plan (2 vs 10) con widget reactivo en Angular 21.
+- [x] Endpoints `/api/users/me` para consulta y edición de perfil.
+- [x] Catálogo de prendas y variantes multitenant con aislamiento por `tenant_id`.
 
 ---
 
-### Hito 2: Consulta de Disponibilidad de Inventario por Sucursal (CU10 - COMPLETADO)
-1. **Backend `p3_gestion_inventario_disponibilidad` y `p2_gestion_productos_catalogo`:**
-   - [x] Consolidar endpoint `/api/inventory/consolidated` y `/api/inventory/branches/{branch_id}` con filtrado estricto por `tenant_id`.
-   - [x] Extender `/api/catalog/availability` para soporte multisede (desglose por sucursales activas del tenant, stock disponible real $StockDisponible = \max(quantity - reserved, 0)$ y total disponible).
-   - [x] Suite de pruebas unitarias e integración en `test_cu10_stock_availability.py` (4/4 PASSED).
-2. **Frontend Web (Angular 21):**
-   - [x] Implementar modal de disponibilidad por sucursales físicas en `ProductDetailPageComponent` bajo lineamientos de `frontend-design`.
-   - [x] Integrar método `getVariantMultiBranchAvailability` en `CatalogApiService`.
-   - [x] Compilación validada con `ng build` (0 errores).
-3. **Limpieza de Repositorio:**
-   - [x] Eliminada carpeta `scratch/` de la raíz del proyecto.
+### Hito 2: Consulta de Disponibilidad y Modo Offline (CU08, CU09, CU10 COMPLETADOS)
+- [x] Disponibilidad multisede en backend (`/api/catalog/availability`), modal en Angular 21 y Bottom Sheet en Flutter.
+- [x] Motor IndexedDB en PWA (`fashionstore_local_db`) y SQLite nativo en Flutter (`local_catalog_db.dart`).
+- [x] Resiliencia ante caídas de red y toggle de simulación offline.
 
 ---
 
-### Hito 3: Persistencia Local y Modo Offline del Catálogo (CU08 & CU09 - COMPLETADOS)
-1. **Frontend PWA (Angular 21):**
-   - [x] Crear [`idb-catalog.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/idb-catalog.service.ts) sobre API IndexedDB nativa (`fashionstore_local_db` v1 con almacenes `catalog_products` y `catalog_meta`).
-   - [x] Crear [`network-status.service.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/core/offline/network-status.service.ts) con escucha de eventos de red y soporte de simulación desconectada.
-   - [x] Conmutación transparente a IndexedDB en [`catalog-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/cliente/pages/catalog-page.component.ts) con filtrado multicriterio en memoria.
-   - [x] Banner visual en ámbar/pizarra con timestamp de sincronización y badge dinámico de conteo en caché.
-   - [x] Botón explícito de descarga / refresco de catálogo local (`CU08`).
-   - [x] Refinamiento estético y funcional en matriz de variantes de [`admin-catalog-page.component.html`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/admin/pages/admin-catalog-page.component.html) (`frontend-design`).
-   - [x] Compilación validada con `ng build` (0 errores de TypeScript y plantillas).
+### Hito 3: Traslados y Compra con Stripe (CU11 y CU12 COMPLETADOS FULLSTACK)
+- [x] **CU11:** Traslados entre sucursales con ciclo `EN_TRANSITO` -> `COMPLETADO` / `CANCELADO` en Backend y Web (`transfers-page`).
+- [x] **CU12:** Compra con Stripe y despacho condicionado (Política 3) en Backend, Frontend Web y Mobile Flutter. Línea de vida ICONIX de 5 etapas.
 
 ---
 
-### Hito 4: Presentación 2 — Traslados Multisede y Pagos con Stripe (CU11 y CU12 BACKEND COMPLETADOS)
-1. **CU11: Registrar y Autorizar Traslados de Mercadería (COMPLETADO):**
-   - [x] Migración Alembic `0042_add_inventory_transfers.py` con tablas `inventory_transfers` e `inventory_transfer_items`.
-   - [x] Endpoints en `p3_gestion_inventario_disponibilidad` (`POST /api/inventory/transfers`, `GET /api/inventory/transfers`, `POST /api/inventory/transfers/{id}/receive`, `POST /api/inventory/transfers/{id}/cancel`).
-   - [x] Reglas de negocio sagradas: descuento preventivo en origen al despachar (`EN_TRANSITO`), retención en carretera sin tocar destino, acreditación al confirmar recepción (`COMPLETADO`) y restitución a origen al anular (`CANCELADO`).
-   - [x] Suite de pruebas automatizadas en `backend/tests/test_cu11_inventory_transfers.py` (5/5 PASSED).
-   - [x] Frontend Web en Angular 21: [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) en `/app/encargado/transfers` y `/app/admin/transfers`.
+### Hito 4: Consolidación Definitiva de Base de Datos para Todos los CUs (COMPLETADO)
+- [x] **Migración Maestra 0044 (`0044_complete_database_schema_all_use_cases.py`):**
+  - [x] `tenant_id` y claves foráneas añadidas a todas las tablas restantes (`reservations`, `sales`, `conversations`, etc.).
+  - [x] Tablas de políticas de negocio creadas: `garment_exchanges` (CU19) y `garment_returns` (CU20).
+  - [x] Tabla de sincronización idempotente creada: `sync_operations` (CU18).
+  - [x] Tablas de Inteligencia Artificial y Machine Learning creadas: `ml_models`, `demand_forecasts` (CU26), `customer_segments` (CU27).
+  - [x] Columnas de auditoría y contingencia offline: `client_sale_id`, `is_offline`, `synced_at` en `sales`; `resolved_at`, `resolved_by`, `resolution_note` en `reservations`.
+- [x] **Modelos ORM & Shims:** Modelos SQLAlchemy implementados en paquetes de dominio y re-exportados en `app/models/` sin dependencias circulares.
+- [x] **Matriz de Trazabilidad:** Integrada en [`docs/ACTORS_AND_USE_CASES.md`](file:///c:/Users/PERSONAL/ecommerce-SI2/docs/ACTORS_AND_USE_CASES.md) (Sección 3).
+- [x] **Base de datos congelada:** Cero migraciones DDL adicionales necesarias.
 
-2. **CU12: Comprar Prendas con Stripe y Despacho Condicionado (100% COMPLETADO FULLSTACK):**
-   - [x] Migración Alembic `0043_add_order_tenant_and_dispatch.py` aplicada (`tenant_id`, `delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at`, `dispatched_by` en `orders`, y `tenant_id` en `order_items`, `carts`, `cart_items`, `payment_attempts`).
-   - [x] Enum `fulfillmentstatusenum` ampliado en PostgreSQL (`ready_for_dispatch`, `dispatched`, `delivered`).
-   - [x] **Política de Negocio 3 (Inviolable):** Bloqueo estricto de despacho en `order_service.py` (`dispatch_order`) si `payment_status != 'paid'`.
-   - [x] Webhook `process_stripe_event` generando guía única `DSP-YYYYMMDD-XXXX` al recibir `payment_intent.succeeded`.
-   - [x] Endpoints `POST /api/orders/{order_id}/dispatch` y `GET /api/orders/tracking/{tracking_number}` implementados y protegidos por rol y multitenant.
-   - [x] Suite automatizada `test_cu12_stripe_conditioned_dispatch.py` (5/5 PASSED).
+---
 
-3. **Próximos Pasos Inmediatos:**
-   - [x] Frontend Web en Angular 21: Checkout con Stripe Elements en cart-page, seguimiento ICONIX interactivo con stepper en orders-page, y panel de despacho en /app/admin/orders y /app/encargado/orders con notas de transporte.
-   - [ ] CU13 – Registrar Reserva de Prendas (Online y Offline).
-   - [ ] CU14 – Atender Reserva y Resolver Conflictos de Stock.
+### Hito 5: Próximos Casos de Uso a Implementar (Presentación 2)
+
+#### Prioridad Inmediata A: Reservas de Prendas en Tienda Física (CU13 y CU14)
+1. **CU13: Crear Reserva de Prendas con Vencimiento:**
+   - [ ] Backend: Lógica en `reservation_service.py` (`POST /api/reservations`), incremento de `reserved_quantity` en `inventory` y temporizador de expiración (24-48h).
+   - [ ] Frontend Web: Vista de confirmación de reserva y selección de sucursal de visita.
+   - [ ] Mobile Flutter: Pantalla de reserva de prendas y recordatorio de retiro.
+2. **CU14: Atender y Resolver Conflictos de Reservas:**
+   - [ ] Backend: Tarea periódica de expiración (`expire_daily.py`), endpoints de resolución `/api/reservations/{id}/resolve`.
+   - [ ] Frontend Web: Panel de encargado de sucursal para liberar prendas no retiradas a stock general.
+
+#### Prioridad Inmediata B: Ventas POS Offline y Sincronización Idempotente (CU16, CU17, CU18)
+1. **CU16: Registrar Venta Offline en Efectivo con UUIDv4:**
+   - [ ] Frontend/Mobile: Generación de UUIDv4 en cliente, registro en almacén local offline (`PENDIENTE_SYNC`).
+2. **CU17: Bandeja Local de Operaciones Pendientes:**
+   - [ ] UI de caja con contador de ventas pendientes de subir y botón de forzar sincronización.
+3. **CU18: Sincronización de Lotes con Idempotencia:**
+   - [ ] Backend: Endpoint `POST /api/sales/offline/batch-sync` contra tabla `sync_operations`. Si el `client_operation_id` ya fue procesado, confirmar sin duplicar venta ni descontar inventario dos veces.

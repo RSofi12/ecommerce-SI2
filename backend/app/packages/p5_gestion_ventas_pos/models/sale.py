@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -14,9 +14,14 @@ class Sale(Base):
     __tablename__ = "sales"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True, index=True)
     branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     reservation_id = Column(UUID(as_uuid=True), ForeignKey("reservations.id"), nullable=True, unique=True, index=True)
+    client_sale_id = Column(UUID(as_uuid=True), nullable=True, unique=True, index=True)
+    is_offline = Column(Boolean, nullable=False, default=False)
+    synced_at = Column(DateTime(timezone=True), nullable=True)
+    idempotency_key = Column(String(100), nullable=True, index=True)
     status = Column(SQLAlchemyEnum(SaleStatusEnum, name="salestatusenum"), nullable=False, default=SaleStatusEnum.completed)
     payment_method = Column(SQLAlchemyEnum(PaymentMethodEnum, name="paymentmethodenum"), nullable=False)
     payment_status = Column(SQLAlchemyEnum(PaymentStatusEnum, name="paymentstatusenum"), nullable=False, default=PaymentStatusEnum.paid)
@@ -29,3 +34,5 @@ class Sale(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
 
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
+    company = relationship("Company")
+    branch = relationship("Branch")

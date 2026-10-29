@@ -33,8 +33,10 @@ Documento oficial de control de avance de los **28 Casos de Uso** organizados po
 ## 🎯 Presentación 2: Domingo 01/11/2026 (Meta: 21 Casos de Uso Acumulados)
 **Objetivo Técnico:** Ventas Offline, Cola de Sincronización, Idempotencia, Stripe, Devoluciones, Cambios de Prenda y Mapas.
 
-- [x] **CU11 – Registrar Movimiento de Inventario y Traspasos** [1er Parcial - MODIFICADO]
-- [x] **CU12 – Gestionar Carrito y Compra Digital con Pasarela Stripe y Despacho Condicionado** [1er Parcial - MODIFICADO - 100% Implementado (Backend, BD y Frontend Web)]
+> **Consolidación Definitiva de Base de Datos:** La migración maestra `0044` completó y congeló todas las tablas, columnas, relaciones e índices para los 28 Casos de Uso del sistema en PostgreSQL (`alembic upgrade head`).
+
+- [x] **CU11 – Registrar Movimiento de Inventario y Traspasos** [1er Parcial - MODIFICADO - 100% Implementado (Backend y Frontend Web)]
+- [x] **CU12 – Gestionar Carrito y Compra Digital con Pasarela Stripe y Despacho Condicionado** [1er Parcial - MODIFICADO - 100% Implementado (Backend, BD, Frontend Web y Mobile Flutter)]
   - *Regla de negocio:* El envío/entrega solo se autoriza con pago confirmado en Stripe (Política 3).
 - [ ] **CU13 – Registrar Reserva de Prendas (Online y Offline)** [2do Parcial - NUEVO]
 - [ ] **CU14 – Atender Reserva y Resolver Conflictos de Stock** [1er Parcial - MODIFICADO]

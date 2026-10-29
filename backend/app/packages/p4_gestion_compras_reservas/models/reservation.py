@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, Date, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Numeric
+from sqlalchemy import Column, Date, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -13,6 +13,7 @@ class Reservation(Base):
     __tablename__ = "reservations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True, index=True)
     branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     cart_id = Column(UUID(as_uuid=True), ForeignKey("carts.id"), nullable=True, unique=True, index=True)
@@ -20,7 +21,11 @@ class Reservation(Base):
     expires_at = Column(Date, nullable=False, index=True)
     status = Column(SQLAlchemyEnum(ReservationStatusEnum, name="reservationstatusenum"), nullable=False, default=ReservationStatusEnum.pending)
     total_amount = Column(Numeric(10, 2), nullable=False, default=0)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    resolution_note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
 
     items = relationship("ReservationItem", back_populates="reservation", cascade="all, delete-orphan")
+    company = relationship("Company")

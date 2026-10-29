@@ -68,7 +68,44 @@ El modelado ICONIX define a los actores como entidades externas que interactúan
 
 ---
 
-## 3. Diagrama General de Casos de Uso (UML)
+## 3. Matriz de Trazabilidad: Casos de Uso vs Tablas de Base de Datos (Esquema Final Consolidado)
+
+Esta matriz establece el mapeo estricto entre los 28 Casos de Uso y las tablas de la base de datos relacional PostgreSQL (`ecommerce_db`), consolidada formalmente en la migración `0044_complete_database_schema_all_use_cases.py` con aislamiento SaaS multitenant (`tenant_id`), políticas comerciales inviolables y soporte offline idempotente:
+
+| Paquete | Código | Nombre del Caso de Uso | Tablas de Base de Datos Involucradas | Claves y Columnas Críticas de Negocio |
+| :--- | :--- | :--- | :--- | :--- |
+| **P0/P1** | **CU01** | Registrar y Gestionar Empresas (Tenants) | `companies`, `subscriptions`, `plans` | `subdomain`, `nit_rut`, `status`, `tenant_id` |
+| **P0/P1** | **CU02** | Gestionar Planes de Suscripción y Límites | `plans`, `subscriptions`, `companies` | `max_branches`, `has_ai_access`, `price_monthly`, cuotas de plan |
+| **P1** | **CU03** | Iniciar Sesión Multitenant con JWT | `users`, `companies`, `branches` | Claims JWT (`sub`, `rol`, `tenant_id`, `branch_id`), hash BCrypt |
+| **P1** | **CU04** | Gestionar Sucursales Bajo Límites del Plan | `branches`, `companies`, `subscriptions` | `tenant_id`, `is_default`, `latitude`, `longitude`, conteo vs plan |
+| **P1** | **CU05** | Gestionar Perfil y Preferencias de Usuario | `users`, `user_body_profiles` | `top_size`, `bottom_size`, `shoe_size`, notas ergonómicas |
+| **P2** | **CU06** | Gestionar Prendas y Variantes Talla/Precio | `products`, `product_variants`, `sizes`, `colors`, `categories` | `tenant_id`, `sku` compuesto, `price`, `garment_points`, `image_url` |
+| **P2** | **CU07** | Consultar Catálogo Online con Búsqueda Facetada | `products`, `product_variants`, `categories`, `promotion_codes` | Filtros facetados (`size_id`, `color_id`, `category_id`, precios) |
+| **P3** | **CU08** | Descargar Catálogo a Base Local (IDB/SQLite) | `catalog_cache`, `products`, `product_variants` | `tenant_id`, `version`, payload JSON de catálogo estructurado |
+| **P3** | **CU09** | Consultar Catálogo Offline en Modo Desconectado | `catalog_cache` | Consulta sin conexión a red desde caché local sincronizado |
+| **P3** | **CU10** | Consultar Disponibilidad de Stock por Sucursal | `inventory`, `branches`, `product_variants` | `tenant_id`, `quantity`, `reserved_quantity`, stock neto disponible |
+| **P3** | **CU11** | Registrar y Autorizar Traslados de Mercadería | `inventory_transfers`, `inventory`, `inventory_movements` | `source_branch_id`, `dest_branch_id`, `status` (PENDING/APPROVED/REJECTED) |
+| **P4** | **CU12** | Comprar Prendas con Stripe y Despacho Condicionado | `orders`, `order_items`, `carts`, `cart_items` | `tenant_id`, `delivery_type`, `shipping_address`, `tracking_number`, `dispatched_at` (Política 3) |
+| **P4** | **CU13** | Crear Reserva de Prendas con Vencimiento | `reservations`, `reservation_items`, `inventory` | `tenant_id`, `expires_at`, `status`, bloqueo temporal en `reserved_quantity` |
+| **P4** | **CU14** | Atender y Resolver Conflictos de Reservas | `reservations`, `reservation_items`, `inventory` | `tenant_id`, `resolved_at`, `resolved_by`, `resolution_note`, liberación stock |
+| **P5** | **CU15** | Registrar Venta Directa en POS Online | `sales`, `sale_items`, `inventory`, `inventory_movements` | `tenant_id`, `payment_method`, descuento inmediato en `inventory` |
+| **P5** | **CU16** | Registrar Venta Offline en Efectivo con UUID | `sales`, `sale_items` | `tenant_id`, `client_sale_id UUID UNIQUE`, `is_offline = TRUE`, `synced_at` |
+| **P5** | **CU17** | Gestionar Bandeja Local de Operaciones Pendientes | `sync_operations` (Frontend IDB/SQLite) | Bandeja local de lotes offline identificados con UUIDv4 |
+| **P5** | **CU18** | Sincronizar Lotes de Ventas con Idempotencia | `sync_operations`, `sales`, `sale_items`, `inventory` | `client_operation_id UNIQUE`, `payload`, `status`, prevención doble débito |
+| **P5** | **CU19** | Procesar Cambio de Prenda con Diferencia de Precio | `garment_exchanges`, `sales`, `product_variants`, `inventory` | `price_difference`, `difference_paid` (Política 1: abono obligatorio) |
+| **P5** | **CU20** | Procesar Devolución con Retención del 20%-50% | `garment_returns`, `sales`, `product_variants`, `inventory` | `retention_percentage`, `retention_amount`, `refund_amount`, `credit_note_code` (Política 2) |
+| **P6** | **CU21** | Localizar Sucursales y Trazar Rutas (OpenStreetMap)| `branches` | `latitude`, `longitude`, cálculo de rutas por OpenRouteService |
+| **P6** | **CU22** | Probar Prendas en Realidad Aumentada (AR) | `product_variants` | `garment_points` (JSON de anclaje de hombros, cintura, cuello) |
+| **P7** | **CU23** | Generar Reportes Ejecutivos por Voz (Gemini RAG) | `conversations`, `conversation_messages`, `sales`, `inventory` | `tenant_id`, transcripción y respuesta estructurada en lenguaje natural |
+| **P7** | **CU24** | Exportar Balances Dinámicos a PDF y Excel | `sales`, `inventory`, `orders`, `branches` | Agregaciones contables y arqueos segregados por `tenant_id` |
+| **P7** | **CU25** | Generar Dataset Sintético de Ventas y Estacionalidad| `ml_models` | 10,000+ filas estocásticas con quincenas, estacionalidad textil y tasas de cambio |
+| **P7** | **CU26** | Predecir Demanda de Ropa (Supervisado) | `demand_forecasts`, `ml_models`, `product_variants` | `forecast_period`, `predicted_units`, modelo RandomForestRegressor ($R^2 \ge 0.82$) |
+| **P7** | **CU27** | Segmentar Clientes con K-Means (No Supervisado) | `customer_segments`, `ml_models`, `users` | `cluster_id` (0..3: VIP, Ocasional, Descuentos, Cambios), RFM + Devoluciones |
+| **P7** | **CU28** | Visualizar Dashboard Ejecutivo con KPIs | `demand_forecasts`, `customer_segments`, `sales`, `orders` | Visualización agregada de métricas en tiempo real y proyecciones |
+
+---
+
+## 4. Diagrama General de Casos de Uso (UML)
 
 ```mermaid
 flowchart TB
@@ -180,7 +217,7 @@ flowchart TB
 
 ---
 
-## 4. Especificación Detallada de los 28 Casos de Uso (ICONIX)
+## 5. Especificación Detallada de los 28 Casos de Uso (ICONIX)
 
 > **Regla de Oro ICONIX para Diagramas de Robustez y Flujos:**  
 > En la metodología ICONIX, las pantallas y vistas son Fronteras (`<<boundary>>`), las entidades son (`<<entity>>`) y las reglas de negocio, validaciones y ciclos son Controladores (`<<control>>`). **Todo bucle (*loop*) y flujo alternativo parte EXCLUSIVAMENTE de un objeto Controlador**, jamás de una Frontera.

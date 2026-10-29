@@ -115,3 +115,17 @@
   - Endpoints REST en `p3_gestion_inventario_disponibilidad` (`POST /api/inventory/transfers`, `GET /api/inventory/transfers`, `POST /api/inventory/transfers/{id}/receive`, `POST /api/inventory/transfers/{id}/cancel`).
   - Frontend Web Angular 21 en [`transfers-page.component.ts`](file:///c:/Users/PERSONAL/ecommerce-SI2/frontend/src/app/features/encargado/pages/transfers-page.component.ts) disponible en `/app/encargado/transfers` y `/app/admin/transfers`.
   - Suite automatizada de pruebas unitarias y de integración ([`test_cu11_inventory_transfers.py`](file:///c:/Users/PERSONAL/ecommerce-SI2/backend/tests/test_cu11_inventory_transfers.py)) con 5/5 pruebas PASSED.
+
+
+### Registro 14: 2026-10-28 — Consolidación Definitiva del Esquema de Base de Datos para Todos los Casos de Uso (Migración 0044)
+* **Decisión:** Congelar y unificar el modelo de datos de PostgreSQL para los 28 Casos de Uso del sistema mediante una única migración maestra (`0044_complete_database_schema_all_use_cases.py`), eliminando la necesidad de futuras migraciones DDL parciales en lo que resta del desarrollo.
+* **Motivo:** Evitar la fragmentación de migraciones de Alembic a medida que se implementan los casos de uso restantes (CU13 a CU28), prevenir inconsistencias o dependencias circulares entre paquetes de dominio, y garantizar que los contratos de datos de Backend, Web Frontend y Mobile Flutter queden establecidos con absoluta certeza.
+* **Impacto:**
+  - Migración `0044` aplicada exitosamente en PostgreSQL (`alembic upgrade head`).
+  - Extensión de aislamiento multitenant: Claves foráneas e índices `tenant_id` aplicados a `reservations`, `reservation_items`, `sales`, `sale_items`, `conversations`, `conversation_messages`, `promotion_codes` y `promotion_code_usages`.
+  - Tablas de Políticas de Negocio Inviolables creadas: `garment_exchanges` (CU19: Política 1) y `garment_returns` (CU20: Política 2).
+  - Tabla de Sincronización e Idempotencia creada: `sync_operations` (CU18: `client_operation_id UNIQUE`).
+  - Tablas de Inteligencia Artificial y Machine Learning creadas: `ml_models`, `demand_forecasts` (CU26) y `customer_segments` (CU27).
+  - Trazabilidad y contingencia offline: Columnas `client_sale_id UUID UNIQUE`, `is_offline BOOLEAN`, `synced_at`, `idempotency_key` en `sales`; `resolved_at`, `resolved_by`, `resolution_note` en `reservations`.
+  - Creación de modelos canónicos en paquetes de dominio (`p4`, `p5`, `p6`) con shims de compatibilidad en `app/models/` y verificación de introspección ORM al 100%.
+  - Matriz completa de correspondencia Casos de Uso vs Tablas documentada en [`docs/ACTORS_AND_USE_CASES.md`](file:///c:/Users/PERSONAL/ecommerce-SI2/docs/ACTORS_AND_USE_CASES.md) (Sección 3).
